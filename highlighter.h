@@ -3,7 +3,7 @@
 ** Copyright (C) 2016 The Qt Company Ltd.
 ** Contact: https://www.qt.io/licensing/
 **
-** This file is part of the demonstration applications of the Qt Toolkit.
+** This file is part of the examples of the Qt Toolkit.
 **
 ** $QT_BEGIN_LICENSE:BSD$
 ** Commercial License Usage
@@ -48,38 +48,46 @@
 **
 ****************************************************************************/
 
-#include "textedit.h"
+#ifndef HIGHLIGHTER_H
+#define HIGHLIGHTER_H
 
-#include <QApplication>
-#include <QDesktopWidget>
-#include <QCommandLineParser>
-#include <QCommandLineOption>
+#include <QSyntaxHighlighter>
+#include <QTextCharFormat>
+#include <QRegularExpression>
 
-int main(int argc, char *argv[])
+QT_BEGIN_NAMESPACE
+class QTextDocument;
+QT_END_NAMESPACE
+
+//! [0]
+class Highlighter : public QSyntaxHighlighter
 {
-    Q_INIT_RESOURCE(RTcmixShell);
+    Q_OBJECT
 
-    QApplication a(argc, argv);
-    QCoreApplication::setOrganizationName("RTcmix");
-    QCoreApplication::setApplicationName("RTcmixShell");
-    QCoreApplication::setApplicationVersion(QT_VERSION_STR);
-    QCommandLineParser parser;
-    parser.setApplicationDescription(QCoreApplication::applicationName());
-    parser.addHelpOption();
-    parser.addVersionOption();
-    parser.addPositionalArgument("file", "The file to open.");
-    parser.process(a);
+public:
+    Highlighter(QTextDocument *parent = 0);
 
-    TextEdit mw;
+protected:
+    void highlightBlock(const QString &text) override;
 
-    const QRect availableGeometry = QApplication::desktop()->availableGeometry(&mw);
-    mw.resize(availableGeometry.width() / 2, (availableGeometry.height() * 2) / 3);
-    mw.move((availableGeometry.width() - mw.width()) / 2,
-            (availableGeometry.height() - mw.height()) / 2);
+private:
+    struct HighlightingRule
+    {
+        QRegularExpression pattern;
+        QTextCharFormat format;
+    };
+    QVector<HighlightingRule> highlightingRules;
 
-    if (!mw.load(parser.positionalArguments().value(0, QLatin1String(":/starter.sco"))))
-        mw.fileNew();
+    QRegularExpression commentStartExpression;
+    QRegularExpression commentEndExpression;
 
-    mw.show();
-    return a.exec();
-}
+    QTextCharFormat keywordFormat;
+    QTextCharFormat classFormat;
+    QTextCharFormat singleLineCommentFormat;
+    QTextCharFormat multiLineCommentFormat;
+    QTextCharFormat quotationFormat;
+    QTextCharFormat functionFormat;
+};
+//! [0]
+
+#endif // HIGHLIGHTER_H

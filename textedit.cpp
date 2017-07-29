@@ -101,12 +101,8 @@ TextEdit::TextEdit(QWidget *parent)
     setWindowTitle(QCoreApplication::applicationName());
 
     textEdit = new QTextEdit(this);
-#ifdef RTFEDIT
-    connect(textEdit, &QTextEdit::currentCharFormatChanged,
-            this, &TextEdit::currentCharFormatChanged);
-#endif
-    connect(textEdit, &QTextEdit::cursorPositionChanged,
-            this, &TextEdit::cursorPositionChanged);
+
+    connect(textEdit, &QTextEdit::cursorPositionChanged, this, &TextEdit::cursorPositionChanged);
     setCentralWidget(textEdit);
 
     setToolButtonStyle(Qt::ToolButtonFollowStyle);
@@ -121,13 +117,22 @@ TextEdit::TextEdit(QWidget *parent)
     }
 
     QFont textFont("Courier");
-    textFont.setStyleHint(QFont::TypeWriter);
+    textFont.setStyleHint(QFont::Monospace);
+    textFont.setFixedPitch(true);
+    textFont.setPointSize(12);
     textEdit->setFont(textFont);
+
+//TODO: make this a preference
+    const int tabStop = 4;
+    QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
+    for (int i = 0; i < tabStop; i++)
+        spaces += " ";
+    QFontMetrics metrics(textFont);
+    textEdit->setTabStopWidth(metrics.width(spaces));
+
     fontChanged(textEdit->font());
-#ifdef RTFEDIT
-    colorChanged(textEdit->textColor());
-    alignmentChanged(textEdit->alignment());
-#endif
+
+    highlighter = new Highlighter(textEdit->document());
 
     connect(textEdit->document(), &QTextDocument::modificationChanged,
             actionSave, &QAction::setEnabled);
@@ -256,7 +261,7 @@ void TextEdit::setupEditActions()
 void TextEdit::setupTextActions()
 {
     QToolBar *tb = addToolBar(tr("Format Actions"));
-#ifdef RTFEDIT
+#ifdef RTFEDIT // use the following as a model for making play, stop, etc. buttons
     QMenu *menu = menuBar()->addMenu(tr("F&ormat"));
 
     const QIcon boldIcon = QIcon::fromTheme("format-text-bold", QIcon(rsrcPath + "/textbold.png"));
@@ -291,70 +296,10 @@ void TextEdit::setupTextActions()
 
     menu->addSeparator();
 
-    const QIcon leftIcon = QIcon::fromTheme("format-justify-left", QIcon(rsrcPath + "/textleft.png"));
-    actionAlignLeft = new QAction(leftIcon, tr("&Left"), this);
-    actionAlignLeft->setShortcut(Qt::CTRL + Qt::Key_L);
-    actionAlignLeft->setCheckable(true);
-    actionAlignLeft->setPriority(QAction::LowPriority);
-    const QIcon centerIcon = QIcon::fromTheme("format-justify-center", QIcon(rsrcPath + "/textcenter.png"));
-    actionAlignCenter = new QAction(centerIcon, tr("C&enter"), this);
-    actionAlignCenter->setShortcut(Qt::CTRL + Qt::Key_E);
-    actionAlignCenter->setCheckable(true);
-    actionAlignCenter->setPriority(QAction::LowPriority);
-    const QIcon rightIcon = QIcon::fromTheme("format-justify-right", QIcon(rsrcPath + "/textright.png"));
-    actionAlignRight = new QAction(rightIcon, tr("&Right"), this);
-    actionAlignRight->setShortcut(Qt::CTRL + Qt::Key_R);
-    actionAlignRight->setCheckable(true);
-    actionAlignRight->setPriority(QAction::LowPriority);
-    const QIcon fillIcon = QIcon::fromTheme("format-justify-fill", QIcon(rsrcPath + "/textjustify.png"));
-    actionAlignJustify = new QAction(fillIcon, tr("&Justify"), this);
-    actionAlignJustify->setShortcut(Qt::CTRL + Qt::Key_J);
-    actionAlignJustify->setCheckable(true);
-    actionAlignJustify->setPriority(QAction::LowPriority);
-
-    // Make sure the alignLeft  is always left of the alignRight
-    QActionGroup *alignGroup = new QActionGroup(this);
-    connect(alignGroup, &QActionGroup::triggered, this, &TextEdit::textAlign);
-
-    if (QApplication::isLeftToRight()) {
-        alignGroup->addAction(actionAlignLeft);
-        alignGroup->addAction(actionAlignCenter);
-        alignGroup->addAction(actionAlignRight);
-    } else {
-        alignGroup->addAction(actionAlignRight);
-        alignGroup->addAction(actionAlignCenter);
-        alignGroup->addAction(actionAlignLeft);
-    }
-    alignGroup->addAction(actionAlignJustify);
-
-    tb->addActions(alignGroup->actions());
-    menu->addActions(alignGroup->actions());
-
-    menu->addSeparator();
-
-    QPixmap pix(16, 16);
-    pix.fill(Qt::black);
-    actionTextColor = menu->addAction(pix, tr("&Color..."), this, &TextEdit::textColor);
-    tb->addAction(actionTextColor);
-
     tb = addToolBar(tr("Format Actions"));
     tb->setAllowedAreas(Qt::TopToolBarArea | Qt::BottomToolBarArea);
     addToolBarBreak(Qt::TopToolBarArea);
     addToolBar(tb);
-
-    comboStyle = new QComboBox(tb);
-    tb->addWidget(comboStyle);
-    comboStyle->addItem("Standard");
-    comboStyle->addItem("Bullet List (Disc)");
-    comboStyle->addItem("Bullet List (Circle)");
-    comboStyle->addItem("Bullet List (Square)");
-    comboStyle->addItem("Ordered List (Decimal)");
-    comboStyle->addItem("Ordered List (Alpha lower)");
-    comboStyle->addItem("Ordered List (Alpha upper)");
-    comboStyle->addItem("Ordered List (Roman lower)");
-    comboStyle->addItem("Ordered List (Roman upper)");
-
-    connect(comboStyle, QOverload<int>::of(&QComboBox::activated), this, &TextEdit::textStyle);
 #endif
 
     comboFont = new QFontComboBox(tb);
@@ -382,20 +327,12 @@ bool TextEdit::load(const QString &f)
     if (!file.open(QFile::ReadOnly))
         return false;
 
+    // See syntaxhighlighter example for a simpler way...
     QByteArray data = file.readAll();
     QTextCodec *codec = Qt::codecForHtml(data);
     QString str = codec->toUnicode(data);
-#ifdef RTFEDIT
-    if (Qt::mightBeRichText(str)) {
-        textEdit->setHtml(str);
-    } else {
-        str = QString::fromLocal8Bit(data);
-        textEdit->setPlainText(str);
-    }
-#else
     str = QString::fromLocal8Bit(data);
     textEdit->setPlainText(str);
-#endif
 
     setCurrentFileName(f);
     return true;
@@ -446,7 +383,11 @@ void TextEdit::fileOpen()
     QFileDialog fileDialog(this, tr("Open File..."));
     fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
     fileDialog.setFileMode(QFileDialog::ExistingFile);
+#ifdef NOMORE
     fileDialog.setMimeTypeFilters(QStringList() << "text/plain");
+#else
+    fileDialog.setNameFilters(QStringList() << "RTcmix score files (*.sco)");
+#endif
     if (fileDialog.exec() != QDialog::Accepted)
         return;
     const QString fn = fileDialog.selectedFiles().first();
@@ -479,10 +420,17 @@ bool TextEdit::fileSaveAs()
 {
     QFileDialog fileDialog(this, tr("Save as..."));
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
+#ifdef NOTYET
+    fileDialog.setMimeTypeFilters(QStringList() << "text/plain");
+ //   fileDialog.setNameFilters(QStringList() << "RTcmix score files (*.sco)");
+ //   fileDialog.setDefaultSuffix("sco");
+#else // issue is that without setDefaultSuffix("txt"), or just giving that suffix, writing will fail. How does this work with .cpp, etc? These must be standard mime types
     QStringList mimeTypes;
-    mimeTypes << "application/vnd.oasis.opendocument.text" << "text/plain";
+//    mimeTypes << "application/vnd.oasis.opendocument.text" << "text/html" << "text/plain";
+    mimeTypes << "text/plain";
     fileDialog.setMimeTypeFilters(mimeTypes);
-    fileDialog.setDefaultSuffix("sco");
+ //   fileDialog.setDefaultSuffix("txt");
+#endif
     if (fileDialog.exec() != QDialog::Accepted)
         return false;
     const QString fn = fileDialog.selectedFiles().first();
@@ -545,147 +493,37 @@ void TextEdit::filePrintPdf()
 #endif
 }
 
-#ifdef RTFEDIT
-void TextEdit::textBold()
-{
-    QTextCharFormat fmt;
-    fmt.setFontWeight(actionTextBold->isChecked() ? QFont::Bold : QFont::Normal);
-    mergeFormatOnWordOrSelection(fmt);
-}
-
-void TextEdit::textUnderline()
-{
-    QTextCharFormat fmt;
-    fmt.setFontUnderline(actionTextUnderline->isChecked());
-    mergeFormatOnWordOrSelection(fmt);
-}
-
-void TextEdit::textItalic()
-{
-    QTextCharFormat fmt;
-    fmt.setFontItalic(actionTextItalic->isChecked());
-    mergeFormatOnWordOrSelection(fmt);
-}
-#endif
-
 void TextEdit::textFamily(const QString &f)
 {
-    QTextCharFormat fmt;
-    fmt.setFontFamily(f);
-#ifdef RTFEDIT
-    mergeFormatOnWordOrSelection(fmt);
-#endif
+    QFont font = textEdit->currentFont();
+    font.setFamily(f);
+    textEdit->setFont(font);
+    fontChanged(textEdit->font());
 }
 
 void TextEdit::textSize(const QString &p)
 {
     qreal pointSize = p.toFloat();
     if (p.toFloat() > 0) {
-        QTextCharFormat fmt;
-        fmt.setFontPointSize(pointSize);
-#ifdef RTFEDIT
-        mergeFormatOnWordOrSelection(fmt);
-#endif
+        QFont font = textEdit->currentFont();
+        font.setPointSize(pointSize);
+        textEdit->setFont(font);
+        fontChanged(textEdit->font());
     }
 }
 
 #ifdef RTFEDIT
-void TextEdit::textStyle(int styleIndex)
-{
-    QTextCursor cursor = textEdit->textCursor();
-
-    if (styleIndex != 0) {
-        QTextListFormat::Style style = QTextListFormat::ListDisc;
-
-        switch (styleIndex) {
-            default:
-            case 1:
-                style = QTextListFormat::ListDisc;
-                break;
-            case 2:
-                style = QTextListFormat::ListCircle;
-                break;
-            case 3:
-                style = QTextListFormat::ListSquare;
-                break;
-            case 4:
-                style = QTextListFormat::ListDecimal;
-                break;
-            case 5:
-                style = QTextListFormat::ListLowerAlpha;
-                break;
-            case 6:
-                style = QTextListFormat::ListUpperAlpha;
-                break;
-            case 7:
-                style = QTextListFormat::ListLowerRoman;
-                break;
-            case 8:
-                style = QTextListFormat::ListUpperRoman;
-                break;
-        }
-
-        cursor.beginEditBlock();
-
-        QTextBlockFormat blockFmt = cursor.blockFormat();
-
-        QTextListFormat listFmt;
-
-        if (cursor.currentList()) {
-            listFmt = cursor.currentList()->format();
-        } else {
-            listFmt.setIndent(blockFmt.indent() + 1);
-            blockFmt.setIndent(0);
-            cursor.setBlockFormat(blockFmt);
-        }
-
-        listFmt.setStyle(style);
-
-        cursor.createList(listFmt);
-
-        cursor.endEditBlock();
-    } else {
-        // ####
-        QTextBlockFormat bfmt;
-        bfmt.setObjectIndex(-1);
-        cursor.mergeBlockFormat(bfmt);
-    }
-}
-
-void TextEdit::textColor()
-{
-    QColor col = QColorDialog::getColor(textEdit->textColor(), this);
-    if (!col.isValid())
-        return;
-    QTextCharFormat fmt;
-    fmt.setForeground(col);
-    mergeFormatOnWordOrSelection(fmt);
-    colorChanged(col);
-}
-
-void TextEdit::textAlign(QAction *a)
-{
-    if (a == actionAlignLeft)
-        textEdit->setAlignment(Qt::AlignLeft | Qt::AlignAbsolute);
-    else if (a == actionAlignCenter)
-        textEdit->setAlignment(Qt::AlignHCenter);
-    else if (a == actionAlignRight)
-        textEdit->setAlignment(Qt::AlignRight | Qt::AlignAbsolute);
-    else if (a == actionAlignJustify)
-        textEdit->setAlignment(Qt::AlignJustify);
-}
-
 void TextEdit::currentCharFormatChanged(const QTextCharFormat &format)
 {
     fontChanged(format.font());
     colorChanged(format.foreground().color());
 }
+#endif
 
 void TextEdit::cursorPositionChanged()
 {
-    alignmentChanged(textEdit->alignment());
+//    alignmentChanged(textEdit->alignment());
 }
-#endif
 
 void TextEdit::clipboardDataChanged()
 {
@@ -702,41 +540,8 @@ void TextEdit::about()
         "document for you to experiment with."));
 }
 
-#ifdef RTFEDIT
-void TextEdit::mergeFormatOnWordOrSelection(const QTextCharFormat &format)
-{
-    QTextCursor cursor = textEdit->textCursor();
-    if (!cursor.hasSelection())
-        cursor.select(QTextCursor::WordUnderCursor);
-    cursor.mergeCharFormat(format);
-    textEdit->mergeCurrentCharFormat(format);
-}
-
 void TextEdit::fontChanged(const QFont &f)
 {
     comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
     comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
-    actionTextBold->setChecked(f.bold());
-    actionTextItalic->setChecked(f.italic());
-    actionTextUnderline->setChecked(f.underline());
 }
-
-void TextEdit::colorChanged(const QColor &c)
-{
-    QPixmap pix(16, 16);
-    pix.fill(c);
-    actionTextColor->setIcon(pix);
-}
-
-void TextEdit::alignmentChanged(Qt::Alignment a)
-{
-    if (a & Qt::AlignLeft)
-        actionAlignLeft->setChecked(true);
-    else if (a & Qt::AlignHCenter)
-        actionAlignCenter->setChecked(true);
-    else if (a & Qt::AlignRight)
-        actionAlignRight->setChecked(true);
-    else if (a & Qt::AlignJustify)
-        actionAlignJustify->setChecked(true);
-}
-#endif

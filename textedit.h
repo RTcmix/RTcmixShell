@@ -51,11 +51,13 @@
 #ifndef TEXTEDIT_H
 #define TEXTEDIT_H
 
-//#define RTFEDIT
+#include "highlighter.h"
 
 #include <QMainWindow>
 #include <QMap>
 #include <QPointer>
+
+//#define RTFEDIT
 
 QT_BEGIN_NAMESPACE
 class QAction;
@@ -156,6 +158,7 @@ private:
     QToolBar *tb;
     QString fileName;
     QTextEdit *textEdit;
+    Highlighter *highlighter;
 };
 
 #endif // TEXTEDIT_H
