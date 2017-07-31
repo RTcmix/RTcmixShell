@@ -68,8 +68,9 @@ class QTextEdit;
 class QTextCharFormat;
 #endif
 class QMenu;
-class QPrinter;
 QT_END_NAMESPACE
+
+void rtcmixPrintCallback(const char *printBuffer, void *inContext);
 
 class TextEdit : public QMainWindow
 {
@@ -78,7 +79,7 @@ class TextEdit : public QMainWindow
 public:
     TextEdit(QWidget *parent = 0);
 
-    bool load(const QString &f);
+    bool loadFile(const QString &f);
 
 public slots:
     void fileNew();
@@ -87,60 +88,33 @@ protected:
     void closeEvent(QCloseEvent *e) override;
 
 private slots:
+    void playScore();
+    void stopScore();
+
     void fileOpen();
     bool fileSave();
     bool fileSaveAs();
-    void filePrint();
-    void filePrintPreview();
-    void filePrintPdf();
 
- #ifdef RTFEDIT
-    void textBold();
-    void textUnderline();
-    void textItalic();
-#endif
     void textFamily(const QString &f);
     void textSize(const QString &p);
-#ifdef RTFEDIT
-    void textStyle(int styleIndex);
-    void textColor();
-    void textAlign(QAction *a);
-
-    void currentCharFormatChanged(const QTextCharFormat &format);
-#endif
     void cursorPositionChanged();
 
     void clipboardDataChanged();
     void about();
-    void printPreview(QPrinter *);
 
 private:
     void setupFileActions();
     void setupEditActions();
+    void setupAudioActions();
     void setupTextActions();
     bool maybeSave();
     void setCurrentFileName(const QString &fileName);
-
-#ifdef RTFEDIT
-    void mergeFormatOnWordOrSelection(const QTextCharFormat &format);
-#endif
+    void setTabStops();
     void fontChanged(const QFont &f);
-#ifdef RTFEDIT
-    void colorChanged(const QColor &c);
-    void alignmentChanged(Qt::Alignment a);
-#endif
 
     QAction *actionSave;
-#ifdef RTFEDIT
-    QAction *actionTextBold;
-    QAction *actionTextUnderline;
-    QAction *actionTextItalic;
-    QAction *actionTextColor;
-    QAction *actionAlignLeft;
-    QAction *actionAlignCenter;
-    QAction *actionAlignRight;
-    QAction *actionAlignJustify;
-#endif
+    QAction *actionPlayScore;
+    QAction *actionStopScore;
     QAction *actionUndo;
     QAction *actionRedo;
 #ifndef QT_NO_CLIPBOARD
@@ -149,16 +123,12 @@ private:
     QAction *actionPaste;
 #endif
 
-#ifdef RTFEDIT
-    QComboBox *comboStyle;
-#endif
-    QFontComboBox *comboFont;
-    QComboBox *comboSize;
-
-    QToolBar *tb;
-    QString fileName;
     QTextEdit *textEdit;
     Highlighter *highlighter;
+    QString fileName;
+    QFontComboBox *comboFont;
+    QComboBox *comboSize;
+    QToolBar *tb;
 };
 
 #endif // TEXTEDIT_H

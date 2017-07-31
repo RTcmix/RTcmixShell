@@ -71,20 +71,10 @@
 #include <QCloseEvent>
 #include <QMessageBox>
 #include <QMimeData>
-#if defined(QT_PRINTSUPPORT_LIB)
-#include <QtPrintSupport/qtprintsupportglobal.h>
-#if QT_CONFIG(printer)
-#if QT_CONFIG(printdialog)
-#include <QPrintDialog>
-#endif
-#include <QPrinter>
-#if QT_CONFIG(printpreviewdialog)
-#include <QPrintPreviewDialog>
-#endif
-#endif
-#endif
 
+#include "audio.h"
 #include "textedit.h"
+#include "RTcmix_API.h"
 
 #ifdef Q_OS_MAC
 const QString rsrcPath = ":/images/mac";
@@ -92,9 +82,13 @@ const QString rsrcPath = ":/images/mac";
 const QString rsrcPath = ":/images/win";
 #endif
 
+Audio *audio;
+
 TextEdit::TextEdit(QWidget *parent)
     : QMainWindow(parent)
 {
+    audio = new Audio;
+
 #ifdef Q_OS_OSX
     setUnifiedTitleAndToolBarOnMac(true);
 #endif
@@ -108,6 +102,7 @@ TextEdit::TextEdit(QWidget *parent)
     setToolButtonStyle(Qt::ToolButtonFollowStyle);
     setupFileActions();
     setupEditActions();
+    setupAudioActions();
     setupTextActions();
 
     {
@@ -121,16 +116,8 @@ TextEdit::TextEdit(QWidget *parent)
     textFont.setFixedPitch(true);
     textFont.setPointSize(12);
     textEdit->setFont(textFont);
-
-//TODO: make this a preference
-    const int tabStop = 4;
-    QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
-    for (int i = 0; i < tabStop; i++)
-        spaces += " ";
-    QFontMetrics metrics(textFont);
-    textEdit->setTabStopWidth(metrics.width(spaces));
-
     fontChanged(textEdit->font());
+    setTabStops();
 
     highlighter = new Highlighter(textEdit->document());
 
@@ -155,8 +142,25 @@ TextEdit::TextEdit(QWidget *parent)
     connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &TextEdit::clipboardDataChanged);
 #endif
 
+    RTcmix_setPrintCallback(rtcmixPrintCallback, this);
+
     textEdit->setFocus();
     setCurrentFileName(QString());
+}
+
+void rtcmixPrintCallback(const char *printBuffer, void *inContext)
+{
+    (void) inContext;
+    const char *pbuf = printBuffer;
+    char str[1024];
+    int len = strlen(pbuf);
+    while (len > 0) {
+        strncpy(str, pbuf, 1024);
+        str[len-1] = 0; // get rid of duplicate line ending
+        qDebug("%s", str);
+        pbuf += (len + 1);
+        len = strlen(pbuf);
+    }
 }
 
 void TextEdit::closeEvent(QCloseEvent *e)
@@ -169,6 +173,7 @@ void TextEdit::closeEvent(QCloseEvent *e)
 
 void TextEdit::setupFileActions()
 {
+#ifdef MORE_TOOLBARS
     QToolBar *tb = addToolBar(tr("File Actions"));
     QMenu *menu = menuBar()->addMenu(tr("&File"));
 
@@ -194,22 +199,24 @@ void TextEdit::setupFileActions()
     a = menu->addAction(tr("Save &As..."), this, &TextEdit::fileSaveAs);
     a->setPriority(QAction::LowPriority);
     menu->addSeparator();
+#else
+    QMenu *menu = menuBar()->addMenu(tr("&File"));
 
-#ifndef QT_NO_PRINTER
-    const QIcon printIcon = QIcon::fromTheme("document-print", QIcon(rsrcPath + "/fileprint.png"));
-    a = menu->addAction(printIcon, tr("&Print..."), this, &TextEdit::filePrint);
+    QAction *a = menu->addAction(tr("&New"), this, &TextEdit::fileNew);
     a->setPriority(QAction::LowPriority);
-    a->setShortcut(QKeySequence::Print);
-    tb->addAction(a);
+    a->setShortcut(QKeySequence::New);
 
-    const QIcon filePrintIcon = QIcon::fromTheme("fileprint", QIcon(rsrcPath + "/fileprint.png"));
-    menu->addAction(filePrintIcon, tr("Print Preview..."), this, &TextEdit::filePrintPreview);
+    a = menu->addAction(tr("&Open..."), this, &TextEdit::fileOpen);
+    a->setShortcut(QKeySequence::Open);
 
-    const QIcon exportPdfIcon = QIcon::fromTheme("exportpdf", QIcon(rsrcPath + "/exportpdf.png"));
-    a = menu->addAction(exportPdfIcon, tr("&Export PDF..."), this, &TextEdit::filePrintPdf);
+    menu->addSeparator();
+
+    actionSave = menu->addAction(tr("&Save"), this, &TextEdit::fileSave);
+    actionSave->setShortcut(QKeySequence::Save);
+    actionSave->setEnabled(false);
+
+    a = menu->addAction(tr("Save &As..."), this, &TextEdit::fileSaveAs);
     a->setPriority(QAction::LowPriority);
-    a->setShortcut(Qt::CTRL + Qt::Key_D);
-    tb->addAction(a);
 
     menu->addSeparator();
 #endif
@@ -220,6 +227,7 @@ void TextEdit::setupFileActions()
 
 void TextEdit::setupEditActions()
 {
+#ifdef MORE_TOOLBARS
     QToolBar *tb = addToolBar(tr("Edit Actions"));
     QMenu *menu = menuBar()->addMenu(tr("&Edit"));
 
@@ -233,9 +241,10 @@ void TextEdit::setupEditActions()
     actionRedo->setPriority(QAction::LowPriority);
     actionRedo->setShortcut(QKeySequence::Redo);
     tb->addAction(actionRedo);
+
     menu->addSeparator();
 
-#ifndef QT_NO_CLIPBOARD
+  #ifndef QT_NO_CLIPBOARD
     const QIcon cutIcon = QIcon::fromTheme("edit-cut", QIcon(rsrcPath + "/editcut.png"));
     actionCut = menu->addAction(cutIcon, tr("Cu&t"), textEdit, &QTextEdit::cut);
     actionCut->setPriority(QAction::LowPriority);
@@ -255,52 +264,63 @@ void TextEdit::setupEditActions()
     tb->addAction(actionPaste);
     if (const QMimeData *md = QApplication::clipboard()->mimeData())
         actionPaste->setEnabled(md->hasText());
+  #endif
+#else
+    QMenu *menu = menuBar()->addMenu(tr("&Edit"));
+
+    actionUndo = menu->addAction(tr("&Undo"), textEdit, &QTextEdit::undo);
+    actionUndo->setShortcut(QKeySequence::Undo);
+
+    actionRedo = menu->addAction(tr("&Redo"), textEdit, &QTextEdit::redo);
+    actionRedo->setPriority(QAction::LowPriority);
+    actionRedo->setShortcut(QKeySequence::Redo);
+
+    menu->addSeparator();
+
+  #ifndef QT_NO_CLIPBOARD
+    actionCut = menu->addAction(tr("Cu&t"), textEdit, &QTextEdit::cut);
+    actionCut->setPriority(QAction::LowPriority);
+    actionCut->setShortcut(QKeySequence::Cut);
+
+    actionCopy = menu->addAction(tr("&Copy"), textEdit, &QTextEdit::copy);
+    actionCopy->setPriority(QAction::LowPriority);
+    actionCopy->setShortcut(QKeySequence::Copy);
+
+    actionPaste = menu->addAction(tr("&Paste"), textEdit, &QTextEdit::paste);
+    actionPaste->setPriority(QAction::LowPriority);
+    actionPaste->setShortcut(QKeySequence::Paste);
+    if (const QMimeData *md = QApplication::clipboard()->mimeData())
+        actionPaste->setEnabled(md->hasText());
+  #endif
 #endif
+}
+
+void TextEdit::setupAudioActions()
+{
+    QToolBar *tb = addToolBar(tr("Audio"));
+    QMenu *menu = menuBar()->addMenu(tr("A&udio"));
+
+    const QIcon playIcon = style()->standardIcon(QStyle::SP_MediaPlay);
+    actionPlayScore = menu->addAction(playIcon, tr("&Play"), this, &TextEdit::playScore);
+    actionPlayScore->setPriority(QAction::HighPriority);
+    actionPlayScore->setShortcut(Qt::CTRL + Qt::Key_P);
+    tb->addAction(actionPlayScore);
+
+    const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
+    actionStopScore = menu->addAction(stopIcon, tr("Stop"), this, &TextEdit::stopScore);
+    actionStopScore->setPriority(QAction::HighPriority);
+    actionStopScore->setShortcut(Qt::CTRL + Qt::Key_Period);
+    tb->addAction(actionStopScore);
 }
 
 void TextEdit::setupTextActions()
 {
-    QToolBar *tb = addToolBar(tr("Format Actions"));
-#ifdef RTFEDIT // use the following as a model for making play, stop, etc. buttons
-    QMenu *menu = menuBar()->addMenu(tr("F&ormat"));
-
-    const QIcon boldIcon = QIcon::fromTheme("format-text-bold", QIcon(rsrcPath + "/textbold.png"));
-    actionTextBold = menu->addAction(boldIcon, tr("&Bold"), this, &TextEdit::textBold);
-    actionTextBold->setShortcut(Qt::CTRL + Qt::Key_B);
-    actionTextBold->setPriority(QAction::LowPriority);
-    QFont bold;
-    bold.setBold(true);
-    actionTextBold->setFont(bold);
-    tb->addAction(actionTextBold);
-    actionTextBold->setCheckable(true);
-
-    const QIcon italicIcon = QIcon::fromTheme("format-text-italic", QIcon(rsrcPath + "/textitalic.png"));
-    actionTextItalic = menu->addAction(italicIcon, tr("&Italic"), this, &TextEdit::textItalic);
-    actionTextItalic->setPriority(QAction::LowPriority);
-    actionTextItalic->setShortcut(Qt::CTRL + Qt::Key_I);
-    QFont italic;
-    italic.setItalic(true);
-    actionTextItalic->setFont(italic);
-    tb->addAction(actionTextItalic);
-    actionTextItalic->setCheckable(true);
-
-    const QIcon underlineIcon = QIcon::fromTheme("format-text-underline", QIcon(rsrcPath + "/textunder.png"));
-    actionTextUnderline = menu->addAction(underlineIcon, tr("&Underline"), this, &TextEdit::textUnderline);
-    actionTextUnderline->setShortcut(Qt::CTRL + Qt::Key_U);
-    actionTextUnderline->setPriority(QAction::LowPriority);
-    QFont underline;
-    underline.setUnderline(true);
-    actionTextUnderline->setFont(underline);
-    tb->addAction(actionTextUnderline);
-    actionTextUnderline->setCheckable(true);
-
-    menu->addSeparator();
-
-    tb = addToolBar(tr("Format Actions"));
+    QToolBar *tb = addToolBar(tr("Text"));
     tb->setAllowedAreas(Qt::TopToolBarArea | Qt::BottomToolBarArea);
-    addToolBarBreak(Qt::TopToolBarArea);
+//    addToolBarBreak(Qt::TopToolBarArea);
     addToolBar(tb);
-#endif
+
+//    QMenu *menu = menuBar()->addMenu(tr("&Text"));
 
     comboFont = new QFontComboBox(tb);
     tb->addWidget(comboFont);
@@ -319,23 +339,30 @@ void TextEdit::setupTextActions()
     connect(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &TextEdit::textSize);
 }
 
-bool TextEdit::load(const QString &f)
+void TextEdit::playScore()
 {
-    if (!QFile::exists(f))
-        return false;
-    QFile file(f);
-    if (!file.open(QFile::ReadOnly))
-        return false;
+    QString sco = textEdit->document()->toPlainText();
+    QByteArray ba = sco.toLocal8Bit();
+    char *buf = ba.data();
+    if (!buf)
+        return;
+    const int len = strlen(buf);
+    if (len) {
+        // *** will this return before score plays?
+        // do we need to use dyn mem for buf?
+        int result = RTcmix_parseScore(buf, len);
+        Q_UNUSED(result);
+    }
+//    qDebug("invoked playScore(), buf len: %d, buffer...", len);
+//    qDebug("%s", buf);
+}
 
-    // See syntaxhighlighter example for a simpler way...
-    QByteArray data = file.readAll();
-    QTextCodec *codec = Qt::codecForHtml(data);
-    QString str = codec->toUnicode(data);
-    str = QString::fromLocal8Bit(data);
-    textEdit->setPlainText(str);
-
-    setCurrentFileName(f);
-    return true;
+void TextEdit::stopScore()
+{
+    RTcmix_flushScore();
+#if 0 // will totally nuking it help issue with scores acting weird under the influence of other scores?
+    audio->reInitializeRTcmix();
+#endif
 }
 
 bool TextEdit::maybeSave()
@@ -366,7 +393,7 @@ void TextEdit::setCurrentFileName(const QString &fileName)
     else
         shownName = QFileInfo(fileName).fileName();
 
-    setWindowTitle(tr("%1[*] - %2").arg(shownName, QCoreApplication::applicationName()));
+    setWindowTitle(tr("%1 - %2[*]").arg(QCoreApplication::applicationName(), shownName));
     setWindowModified(false);
 }
 
@@ -391,10 +418,29 @@ void TextEdit::fileOpen()
     if (fileDialog.exec() != QDialog::Accepted)
         return;
     const QString fn = fileDialog.selectedFiles().first();
-    if (load(fn))
+    if (loadFile(fn))
         statusBar()->showMessage(tr("Opened \"%1\"").arg(QDir::toNativeSeparators(fn)));
     else
         statusBar()->showMessage(tr("Could not open \"%1\"").arg(QDir::toNativeSeparators(fn)));
+}
+
+bool TextEdit::loadFile(const QString &f)
+{
+    if (!QFile::exists(f))
+        return false;
+    QFile file(f);
+    if (!file.open(QFile::ReadOnly))
+        return false;
+
+    // See syntaxhighlighter example for a simpler way...
+    QByteArray data = file.readAll();
+    QTextCodec *codec = Qt::codecForHtml(data);
+    QString str = codec->toUnicode(data);
+    str = QString::fromLocal8Bit(data);
+    textEdit->setPlainText(str);
+
+    setCurrentFileName(f);
+    return true;
 }
 
 bool TextEdit::fileSave()
@@ -438,66 +484,12 @@ bool TextEdit::fileSaveAs()
     return fileSave();
 }
 
-void TextEdit::filePrint()
-{
-#if QT_CONFIG(printdialog)
-    QPrinter printer(QPrinter::HighResolution);
-    QPrintDialog *dlg = new QPrintDialog(&printer, this);
-    if (textEdit->textCursor().hasSelection())
-        dlg->addEnabledOption(QAbstractPrintDialog::PrintSelection);
-    dlg->setWindowTitle(tr("Print Document"));
-    if (dlg->exec() == QDialog::Accepted)
-        textEdit->print(&printer);
-    delete dlg;
-#endif
-}
-
-void TextEdit::filePrintPreview()
-{
-#if QT_CONFIG(printpreviewdialog)
-    QPrinter printer(QPrinter::HighResolution);
-    QPrintPreviewDialog preview(&printer, this);
-    connect(&preview, &QPrintPreviewDialog::paintRequested, this, &TextEdit::printPreview);
-    preview.exec();
-#endif
-}
-
-void TextEdit::printPreview(QPrinter *printer)
-{
-#ifdef QT_NO_PRINTER
-    Q_UNUSED(printer);
-#else
-    textEdit->print(printer);
-#endif
-}
-
-
-void TextEdit::filePrintPdf()
-{
-#ifndef QT_NO_PRINTER
-//! [0]
-    QFileDialog fileDialog(this, tr("Export PDF"));
-    fileDialog.setAcceptMode(QFileDialog::AcceptSave);
-    fileDialog.setMimeTypeFilters(QStringList("application/pdf"));
-    fileDialog.setDefaultSuffix("pdf");
-    if (fileDialog.exec() != QDialog::Accepted)
-        return;
-    QString fileName = fileDialog.selectedFiles().first();
-    QPrinter printer(QPrinter::HighResolution);
-    printer.setOutputFormat(QPrinter::PdfFormat);
-    printer.setOutputFileName(fileName);
-    textEdit->document()->print(&printer);
-    statusBar()->showMessage(tr("Exported \"%1\"")
-                             .arg(QDir::toNativeSeparators(fileName)));
-//! [0]
-#endif
-}
-
 void TextEdit::textFamily(const QString &f)
 {
-    QFont font = textEdit->currentFont();
+    QFont font = textEdit->font();
     font.setFamily(f);
     textEdit->setFont(font);
+    setTabStops();
     fontChanged(textEdit->font());
 }
 
@@ -505,20 +497,13 @@ void TextEdit::textSize(const QString &p)
 {
     qreal pointSize = p.toFloat();
     if (p.toFloat() > 0) {
-        QFont font = textEdit->currentFont();
+        QFont font = textEdit->font();
         font.setPointSize(pointSize);
         textEdit->setFont(font);
+        setTabStops();
         fontChanged(textEdit->font());
     }
 }
-
-#ifdef RTFEDIT
-void TextEdit::currentCharFormatChanged(const QTextCharFormat &format)
-{
-    fontChanged(format.font());
-    colorChanged(format.foreground().color());
-}
-#endif
 
 void TextEdit::cursorPositionChanged()
 {
@@ -535,9 +520,20 @@ void TextEdit::clipboardDataChanged()
 
 void TextEdit::about()
 {
-    QMessageBox::about(this, tr("About"), tr("This example demonstrates Qt's "
-        "rich text editing facilities in action, providing an example "
-        "document for you to experiment with."));
+    QMessageBox::about(this, tr("About"),
+        tr("RTcmixShell lets you write, play, and record RTcmix scores."));
+}
+
+// Do this after setting a new font or size.
+void TextEdit::setTabStops()
+{
+    //TODO: make this a preference
+    const int tabStop = 4;
+    QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
+    for (int i = 0; i < tabStop; i++)
+        spaces += " ";
+    QFontMetrics metrics(textEdit->font());
+    textEdit->setTabStopWidth(metrics.width(spaces));
 }
 
 void TextEdit::fontChanged(const QFont &f)

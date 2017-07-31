@@ -1,5 +1,4 @@
 QT += widgets
-qtHaveModule(printsupport): QT += printsupport
 
 TEMPLATE        = app
 TARGET          = RTcmixShell
@@ -22,8 +21,6 @@ build_all:!build_pass {
     CONFIG += release
 }
 
-EXAMPLE_FILES = RTcmixShell.qdoc
-
 # install
 target.path = build
 INSTALLS += target
@@ -32,18 +29,11 @@ win32:CONFIG(release, debug|release): LIBS += -L$$PWD/rtcmix/release/ -lrtcmix_e
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/rtcmix/debug/ -lrtcmix_embedded
 else:macx: LIBS += -L$$PWD/rtcmix/ -lrtcmix_embedded
 
-INCLUDEPATH += $$PWD/rtcmix
 DEPENDPATH += $$PWD/rtcmix
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/portaudio/release/ -lportaudio
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/portaudio/debug/ -lportaudio
-else:unix: LIBS += -L$$PWD/portaudio/ -lportaudio
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/portaudio/release/ -lportaudio.2
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/portaudio/debug/ -lportaudio.2
+else:unix: LIBS += -L$$PWD/portaudio/ -lportaudio.2
 
-INCLUDEPATH += $$PWD/portaudio
-DEPENDPATH += $$PWD/portaudio
-
-win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/portaudio/release/libportaudio.a
-else:win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/portaudio/debug/libportaudio.a
-else:win32:!win32-g++:CONFIG(release, debug|release): PRE_TARGETDEPS += $$PWD/portaudio/release/portaudio.lib
-else:win32:!win32-g++:CONFIG(debug, debug|release): PRE_TARGETDEPS += $$PWD/portaudio/debug/portaudio.lib
-else:unix: PRE_TARGETDEPS += $$PWD/portaudio/libportaudio.a
+INCLUDEPATH += $$PWD/.
+DEPENDPATH += $$PWD/.

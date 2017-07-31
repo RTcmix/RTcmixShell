@@ -48,6 +48,7 @@
 **
 ****************************************************************************/
 
+#include "audio.h"
 #include "textedit.h"
 
 #include <QApplication>
@@ -77,9 +78,10 @@ int main(int argc, char *argv[])
     mw.move((availableGeometry.width() - mw.width()) / 2,
             (availableGeometry.height() - mw.height()) / 2);
 
-    if (!mw.load(parser.positionalArguments().value(0, QLatin1String(":/starter.sco"))))
+    if (!mw.loadFile(parser.positionalArguments().value(0, QLatin1String(":/starter.sco"))))
         mw.fileNew();
 
     mw.show();
+
     return a.exec();
 }

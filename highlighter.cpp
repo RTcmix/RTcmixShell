@@ -102,7 +102,7 @@ Highlighter::Highlighter(QTextDocument *parent)
 //! [4]
 
 //! [5]
-    functionFormat.setFontItalic(true);
+//    functionFormat.setFontItalic(true);
     functionFormat.setForeground(Qt::blue);
     rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
     rule.format = functionFormat;
