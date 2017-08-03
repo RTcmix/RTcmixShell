@@ -74,33 +74,33 @@ Highlighter::Highlighter(QTextDocument *parent)
     rule.format = numberFormat;
     highlightingRules.append(rule);
 
-    // 3. C++-style comments
-    singleLineCommentFormat.setForeground(Qt::blue);
-    rule.pattern = QRegularExpression("//[^\n]*");
-    rule.format = singleLineCommentFormat;
-    highlightingRules.append(rule);
-
-    // 4. shell-style comments (beginning with '#')
-    hashLineCommentFormat.setForeground(Qt::blue);
-    rule.pattern = QRegularExpression("#[^\n]*");
-    rule.format = hashLineCommentFormat;
-    highlightingRules.append(rule);
-
-    // 5. C-style multiline comments
-    multiLineCommentFormat.setForeground(Qt::blue);
-
-    // 6. double-quoted strings
+    // 3. double-quoted strings
     quotationFormat.setForeground(Qt::red);
     rule.pattern = QRegularExpression("\".*\"");
     rule.format = quotationFormat;
     highlightingRules.append(rule);
 
-    // 7. functions, including instruments (i.e., anything except keywords that are followed by '(')
+    // 4. functions, including instruments (i.e., anything except keywords that are followed by '(')
 //    functionFormat.setFontItalic(true);
     functionFormat.setForeground(Qt::darkGreen);
     rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
     rule.format = functionFormat;
     highlightingRules.append(rule);
+
+    // 5. C++-style comments
+    singleLineCommentFormat.setForeground(Qt::blue);
+    rule.pattern = QRegularExpression("//[^\n]*");
+    rule.format = singleLineCommentFormat;
+    highlightingRules.append(rule);
+
+    // 6. shell-style comments (beginning with '#')
+    hashLineCommentFormat.setForeground(Qt::blue);
+    rule.pattern = QRegularExpression("#[^\n]*");
+    rule.format = hashLineCommentFormat;
+    highlightingRules.append(rule);
+
+    // 7. C-style multiline comments
+    multiLineCommentFormat.setForeground(Qt::blue);
 
     commentStartExpression = QRegularExpression("/\\*");
     commentEndExpression = QRegularExpression("\\*/");

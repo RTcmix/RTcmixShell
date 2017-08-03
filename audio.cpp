@@ -75,13 +75,15 @@ Audio::Audio()
 
 Audio::~Audio()
 {
-    stopAudio();
     if (portAudioInitialized) {
-        PaError err = Pa_Terminate();
+        PaError err = Pa_CloseStream(stream);
+        if (err != paNoError) {
+            qWarning("Pa_CloseStream error: `%s'", Pa_GetErrorText(err));
+        }
+        err = Pa_Terminate();
         if (err != paNoError) {
             qWarning("Pa_Terminate error: `%s'", Pa_GetErrorText(err));
         }
-qDebug("Pa_Terminate called with noerr");
     }
     if (rtcmixInitialized)
         RTcmix_destroy();
@@ -132,40 +134,29 @@ int Audio::initializeAudio()
     return 0;
 }
 
-int Audio::initializeRTcmix()
+int Audio::startAudio()
 {
-    // initialize RTcmix
-    int status = RTcmix_init();
-    if (status != 0) {
-        qWarning("RTcmix_init returned error (%d)", status);
-        return -1;
+    if (portAudioInitialized && stream != NULL) {
+        PaError err = Pa_StartStream(stream);
+        if (err != paNoError) {
+            qWarning("Pa_StartStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+            return -1;
+        }
+        qDebug("Pa_StartStream returned noerr");
     }
-    rtcmixInitialized = true;
-    // need to destroy rtcmix in case we're here after a config change -- or reconfig it with RTcmix_resetAudio
-
-    status = RTcmix_setAudioBufferFormat(AudioFormat_32BitFloat_Normalized, requestedNumOutChannels);
-    if (status != 0) {
-        qWarning("RTcmix_setAudioBufferFormat returned error (%d)", status);
-        return -1;
-    }
-
-    // TODO: handle input as well as output
-    int recording = 0;
-    status = RTcmix_setparams(requestedSamplingRate, requestedNumOutChannels, requestedBlockSize, recording, DefaultBusCount);
-    if (status != 0) {
-        qWarning("RTcmix_setparams returned error (%d)", status);
-        return -1;
-    }
-
-    qDebug("RTcmix initialized");
     return 0;
 }
 
-int Audio::reInitializeRTcmix()
+int Audio::stopAudio()
 {
-    if (rtcmixInitialized)
-        RTcmix_destroy();
-    return initializeRTcmix();
+    if (portAudioInitialized && stream != NULL) {
+        PaError err = Pa_StopStream(stream);
+        if (err != paNoError) {
+            qWarning("Pa_StopStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+            return -1;
+        }
+    }
+    return 0;
 }
 
 int Audio::memberCallback(
@@ -212,34 +203,46 @@ int Audio::memberCallback(
     return paContinue;
 }
 
-int Audio::startAudio()
+int Audio::initializeRTcmix()
 {
-    if (portAudioInitialized && stream != NULL) {
-        PaError err = Pa_StartStream(stream);
-        if (err != paNoError) {
-            qWarning("Pa_StartStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
-            return -1;
-        }
-        qDebug("Pa_StartStream returned noerr");
+    // initialize RTcmix
+    int status = RTcmix_init();
+    if (status != 0) {
+        qWarning("RTcmix_init returned error (%d)", status);
+        return -1;
+    }
+    rtcmixInitialized = true;
+    // need to destroy rtcmix in case we're here after a config change -- or reconfig it with RTcmix_resetAudio
+
+    status = RTcmix_setAudioBufferFormat(AudioFormat_32BitFloat_Normalized, requestedNumOutChannels);
+    if (status != 0) {
+        qWarning("RTcmix_setAudioBufferFormat returned error (%d)", status);
+        return -1;
     }
 
-    // TODO: start RTcmix ... already done in initializeAudio
+    // TODO: handle input as well as output
+    int recording = 0;
+    status = RTcmix_setparams(requestedSamplingRate, requestedNumOutChannels, requestedBlockSize, recording, DefaultBusCount);
+    if (status != 0) {
+        qWarning("RTcmix_setparams returned error (%d)", status);
+        return -1;
+    }
 
+    qDebug("RTcmix initialized");
     return 0;
 }
 
-int Audio::stopAudio()
+int Audio::reInitializeRTcmix()
 {
-    // TODO: stop RTcmix
-
-    if (portAudioInitialized && stream != NULL) {
-        PaError err = Pa_CloseStream(stream);
-        if (err != paNoError) {
-            qWarning("Pa_CloseStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
-            return -1;
-        }
+    if (rtcmixInitialized) {
+        stopAudio();
+        RTcmix_destroy();
+        Pa_Sleep(100);
     }
-
+    initializeRTcmix();
+    int result = startAudio();
+    if (result != 0)
+        return -1;
     return 0;
 }
 

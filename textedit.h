@@ -48,87 +48,27 @@
 **
 ****************************************************************************/
 
-#ifndef TEXTEDIT_H
-#define TEXTEDIT_H
+#ifndef EDITOR_H
+#define EDITOR_H
 
 #include "highlighter.h"
 
-#include <QMainWindow>
-#include <QMap>
-#include <QPointer>
-
-//#define RTFEDIT
-
 QT_BEGIN_NAMESPACE
-class QAction;
-class QComboBox;
-class QFontComboBox;
 class QTextEdit;
-#ifdef RTFEDIT
-class QTextCharFormat;
-#endif
-class QMenu;
 QT_END_NAMESPACE
 
-void rtcmixPrintCallback(const char *printBuffer, void *inContext);
 
-class TextEdit : public QMainWindow
+class Editor : public QTextEdit
 {
     Q_OBJECT
 
 public:
-    TextEdit(QWidget *parent = 0);
-
-    bool loadFile(const QString &f);
-
-public slots:
-    void fileNew();
-
-protected:
-    void closeEvent(QCloseEvent *e) override;
+    Editor(QWidget *parent = 0);
 
 private slots:
-    void playScore();
-    void stopScore();
-
-    void fileOpen();
-    bool fileSave();
-    bool fileSaveAs();
-
-    void textFamily(const QString &f);
-    void textSize(const QString &p);
-    void cursorPositionChanged();
-
-    void clipboardDataChanged();
-    void about();
 
 private:
-    void setupFileActions();
-    void setupEditActions();
-    void setupAudioActions();
-    void setupTextActions();
-    bool maybeSave();
-    void setCurrentFileName(const QString &fileName);
-    void setTabStops();
-    void fontChanged(const QFont &f);
 
-    QAction *actionSave;
-    QAction *actionPlayScore;
-    QAction *actionStopScore;
-    QAction *actionUndo;
-    QAction *actionRedo;
-#ifndef QT_NO_CLIPBOARD
-    QAction *actionCut;
-    QAction *actionCopy;
-    QAction *actionPaste;
-#endif
-
-    QTextEdit *textEdit;
-    Highlighter *highlighter;
-    QString fileName;
-    QFontComboBox *comboFont;
-    QComboBox *comboSize;
-    QToolBar *tb;
 };
 
-#endif // TEXTEDIT_H
+#endif // EDITOR_H

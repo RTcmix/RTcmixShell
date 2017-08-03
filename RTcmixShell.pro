@@ -7,12 +7,14 @@ HEADERS         = audio.h \
                   highlighter.h \
                   portaudio.h \
                   RTcmix_API.h \
-                  textedit.h
+                  textedit.h \
+    mainwindow.h
 
 SOURCES         = audio.cpp \
                   highlighter.cpp \
                   main.cpp \
-                  textedit.cpp
+                  textedit.cpp \
+    mainwindow.cpp
 
 RESOURCES += RTcmixShell.qrc
 
@@ -31,9 +33,9 @@ else:macx: LIBS += -L$$PWD/rtcmix/ -lrtcmix_embedded
 
 DEPENDPATH += $$PWD/rtcmix
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/portaudio/release/ -lportaudio.2
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/portaudio/debug/ -lportaudio.2
-else:unix: LIBS += -L$$PWD/portaudio/ -lportaudio.2
+win32:CONFIG(release, debug|release): LIBS += -L/usr/local/lib/release/ -lportaudio
+else:win32:CONFIG(debug, debug|release): LIBS += -L/usr/local/lib/debug/ -lportaudio
+else:unix: LIBS += -L/usr/local/lib/ -lportaudio
 
-INCLUDEPATH += $$PWD/.
-DEPENDPATH += $$PWD/.
+INCLUDEPATH += /usr/local/include
+DEPENDPATH += /usr/local/include
