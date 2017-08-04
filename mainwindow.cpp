@@ -2,26 +2,32 @@
 #include <QAction>
 #include <QApplication>
 #include <QClipboard>
+#include <QCloseEvent>
 #include <QComboBox>
-#include <QFontComboBox>
 #include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QFontComboBox>
 #include <QFontDatabase>
 #include <QMenu>
 #include <QMenuBar>
-#include <QTextEdit>
-#include <QStatusBar>
-#include <QToolBar>
-#include <QTextCursor>
-#include <QtDebug>
-#include <QCloseEvent>
 #include <QMessageBox>
+#include <QMimeData>
+#include <QPlainTextEdit>
+#include <QSplitter>
+#include <QStatusBar>
+#include <QTextCodec>
+#include <QTextEdit>
+#include <QTimer>
+#include <QToolBar>
+#include <QtDebug>
 
 #include "audio.h"
 #include "highlighter.h"
 #include "mainwindow.h"
 #include "RTcmix_API.h"
+
+void rtcmixPrintCallback(const char *printBuffer, void *inContext);
 
 #ifdef Q_OS_MAC
 const QString rsrcPath = ":/images/mac";
@@ -29,6 +35,8 @@ const QString rsrcPath = ":/images/mac";
 const QString rsrcPath = ":/images/win";
 #endif
 
+const int ringBufferNumChars = 1024 * 128;
+const int jobOutputTimerInterval = 100; // msec
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -45,13 +53,13 @@ MainWindow::MainWindow(QWidget *parent)
 
     createEditors();
     createJobOutputView();
+    setDefaultFont();
     createVerticalSplitter();
 
     setAcceptDrops(true);
     jobOutputView->viewport()->setAcceptDrops(false);
 
     audio = new Audio;
-    RTcmix_setPrintCallback(rtcmixPrintCallback, this);
 }
 
 void MainWindow::createActions()
@@ -84,6 +92,10 @@ void MainWindow::createFileActions()
     actionSaveFileAs->setShortcut(QKeySequence::SaveAs);
     actionSaveFileAs->setStatusTip(tr("Save the edited score to disk"));
     connect(actionSaveFileAs, &QAction::triggered, this, &MainWindow::fileSaveAs);
+
+    actionQuit = new QAction(tr("&Quit"), this);
+    actionQuit->setShortcut(Qt::CTRL + Qt::Key_Q);
+    connect(actionQuit, &QAction::triggered, this, &QWidget::close);
 }
 
 void MainWindow::createEditActions()
@@ -91,29 +103,24 @@ void MainWindow::createEditActions()
     actionUndo = new QAction(tr("&Undo"), this);
     actionUndo->setShortcut(QKeySequence::Undo);
     actionUndo->setStatusTip(tr("Undo the last operation"));
-    connect(actionUndo, &QAction::triggered, this, &MainWindow::undo);
 
     actionRedo = new QAction(tr("&Redo"), this);
     actionRedo->setShortcut(QKeySequence::Redo);
     actionRedo->setStatusTip(tr("Redo the last operation"));
-    connect(actionRedo, &QAction::triggered, this, &MainWindow::redo);
 
     actionCut = new QAction(tr("Cu&t"), this);
     actionCut->setShortcut(QKeySequence::Cut);
     actionCut->setStatusTip(tr("Cut the current selection to the clipboard"));
     actionCut->setEnabled(false);
-    connect(actionCut, &QAction::triggered, this, &MainWindow::cut);
 
     actionCopy = new QAction(tr("&Copy"), this);
     actionCopy->setShortcut(QKeySequence::Copy);
     actionCopy->setStatusTip(tr("Copy the current selection to the clipboard"));
     actionCopy->setEnabled(false);
-    connect(actionCopy, &QAction::triggered, this, &MainWindow::copy);
 
     actionPaste = new QAction(tr("&Paste"), this);
     actionPaste->setShortcut(QKeySequence::Paste);
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
-    connect(actionPaste, &QAction::triggered, this, &MainWindow::paste);
 
     connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::clipboardDataChanged);
 }
@@ -125,14 +132,14 @@ void MainWindow::createScoreActions()
     actionPlay = new QAction(playIcon, tr("&Play"), this);
     actionPlay->setShortcut(Qt::CTRL + Qt::Key_P);
     actionPlay->setStatusTip(tr("Play the score"));
-    connect(actionPlay, &QAction::triggered, this, &MainWindow::play);
+    connect(actionPlay, &QAction::triggered, this, &MainWindow::playScore);
 
     const QIcon stopIcon = QIcon::fromTheme("media-playback-stop", QIcon(rsrcPath + "/stop.png"));
  //   const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
     actionStop = new QAction(stopIcon, tr("&Stop"), this);
     actionStop->setShortcut(Qt::CTRL + Qt::Key_Period);
     actionStop->setStatusTip(tr("Stop playing the score"));
-    connect(actionStop, &QAction::triggered, this, &MainWindow::stop);
+    connect(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
 #ifdef NOTYET
     const QIcon recordIcon = QIcon::fromTheme("media-record", QIcon(rsrcPath + "/record.png"));
@@ -156,6 +163,8 @@ void MainWindow::createMenus()
     fileMenu->addSeparator();
     fileMenu->addAction(actionSaveFile);
     fileMenu->addAction(actionSaveFileAs);
+    fileMenu->addSeparator();
+    fileMenu->addAction(actionQuit);
 
     editMenu = menuBar()->addMenu(tr("&Edit"));
     editMenu->addAction(actionUndo);
@@ -217,7 +226,8 @@ void MainWindow::setDefaultFont()
     textFont.setFixedPitch(true);
     textFont.setPointSize(12);
     editor->setFont(textFont);
-    fontChanged(editor->font());
+    jobOutputView->setFont(textFont);
+    updateFontMenus(editor->font());
     setTabStops();
 }
 
@@ -225,8 +235,14 @@ void MainWindow::setDefaultFont()
 void MainWindow::createEditors()
 {
     editor = new QTextEdit(this);
-    setDefaultFont();
     Highlighter *h = new Highlighter(editor->document());
+    Q_UNUSED(h);
+
+    connect(actionUndo, &QAction::triggered, editor, &QTextEdit::undo);
+    connect(actionRedo, &QAction::triggered, editor, &QTextEdit::redo);
+    connect(actionCut, &QAction::triggered, editor, &QTextEdit::cut);
+    connect(actionCopy, &QAction::triggered, editor, &QTextEdit::copy);
+    connect(actionPaste, &QAction::triggered, editor, &QTextEdit::paste);
 
     connect(editor->document(), &QTextDocument::modificationChanged, actionSaveFile, &QAction::setEnabled);
     connect(editor->document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
@@ -235,32 +251,125 @@ void MainWindow::createEditors()
     connect(editor, &QTextEdit::cursorPositionChanged, this, &MainWindow::cursorPositionChanged);
 
     setWindowModified(editor->document()->isModified());
-    actionSave->setEnabled(editor->document()->isModified());
+    actionSaveFile->setEnabled(editor->document()->isModified());
     actionUndo->setEnabled(editor->document()->isUndoAvailable());
     actionRedo->setEnabled(editor->document()->isRedoAvailable());
     actionCut->setEnabled(false);
     actionCopy->setEnabled(false);
 
-    textEdit->setFocus();
+    editor->setFocus();
     setCurrentFileName(QString(tr("untitled.sco")));
+}
+
+// This is called from one of the RTcmix threads, incl. the high-priority
+// audio thread. Since Qt GUI widgets cannot operate in more than one thread,
+// and since we don't want to put GUI code in the high-priority thread, we
+// use a ring buffer to ship the job output text from here to the main GUI
+// thread before printing to the window.
+void rtcmixPrintCallback(const char *printBuffer, void *inContext)
+{
+    // This is complicated, because we don't know how large printBuffer is,
+    // only that it comprises any number of C-strings laid end-to-end.
+    PaUtilRingBuffer *ringBuf = reinterpret_cast<PaUtilRingBuffer *>(inContext);
+    const char *pbuf = printBuffer;
+    char str[1024];
+    //FIXME: need to seek into first non-null char -- maybe that never happens, though
+    int len = strlen(pbuf); // not incl. term. null
+    while (len > 0) {
+        strncpy(str, pbuf, 1024);
+        str[len] = 0; // strncpy does not guarantee null termination
+        ring_buffer_size_t rbCount = PaUtil_GetRingBufferWriteAvailable(ringBuf);
+        if (rbCount < len) {
+            qDebug("rtcmixPrintCallback: not enough ring buffer space for incoming data");
+            str[rbCount-1] = 0;
+        }
+        rbCount = PaUtil_WriteRingBuffer(ringBuf, str, len);
+//qDebug("PRINT (%d): %s", rbCount, str);
+        pbuf += (len + 1);  // skip to next C-string
+        len = strlen(pbuf);
+    }
 }
 
 void MainWindow::createJobOutputView()
 {
-    jobOutputView = new QTextEdit(this);
-    jobOutputView->setPlainText(tr("Output"));
+    jobOutputView = new QPlainTextEdit(this);
     jobOutputView->setReadOnly(true);
+
+    // set background to very light gray
+    QPalette p = jobOutputView->palette();
+    p.setColor(QPalette::Active, QPalette::Base, QColor(245, 245, 245));
+    p.setColor(QPalette::Inactive, QPalette::Base, QColor(245, 245, 245));
+    jobOutputView->setPalette(p);
+
+    ringBufferBlock = (char *) calloc(ringBufferNumChars, sizeof(char));
+    PaUtil_InitializeRingBuffer(&jobOutputRingBuffer, sizeof(char), ringBufferNumChars, ringBufferBlock);
+    RTcmix_setPrintCallback(rtcmixPrintCallback, &jobOutputRingBuffer);
+
+    jobOutputTimer = new QTimer(this);
+    connect(jobOutputTimer, SIGNAL(timeout()), this, SLOT(checkJobOutput()));
+}
+
+void MainWindow::startJobOutput()
+{
+    // this just resets the read and write pointers
+    PaUtil_FlushRingBuffer(&jobOutputRingBuffer);
+
+    // clear the block held by the ring buffer
+    char *p = ringBufferBlock;
+    int len = ringBufferNumChars;
+    while (len-- > 0)
+        *p++ = 0;
+
+    jobOutputView->clear();
+    if (!jobOutputTimer->isActive())
+        jobOutputTimer->start(jobOutputTimerInterval);
+}
+
+// this runs periodically while user plays a score
+void MainWindow::checkJobOutput()
+{
+    char buf[1024], str[1024];
+    while (1) {
+        bzero(buf, 1024);
+        ring_buffer_size_t rbCount = PaUtil_GetRingBufferReadAvailable(&jobOutputRingBuffer);
+        if (rbCount <= 0)
+            break;
+        PaUtil_ReadRingBuffer(&jobOutputRingBuffer, buf, rbCount);
+        if (buf[rbCount-1] != 0)
+            qDebug("buf last char not null: '%c'", buf[rbCount-1]);
+qDebug("rbCount: %d, buf: %p, buflen: %ld", rbCount, buf, strlen(buf));
+        char *pbuf = buf;
+        int len = strlen(pbuf);   // not incl. term. null
+        while (len > 0) {
+#if 1
+            jobOutputView->appendPlainText(QString(pbuf));
+#else
+            strncpy(str, pbuf, 1024);
+            str[len] = 0; // strncpy does not guarantee null termination
+            jobOutputView->appendPlainText(QString(str));
+#endif
+            pbuf += (len + 1);  // skip to next C-string
+            len = strlen(pbuf);
+        }
+    }
+    jobOutputView->moveCursor(QTextCursor::End);
+}
+
+void MainWindow::stopJobOutput()
+{
+    jobOutputTimer->stop();
 }
 
 void MainWindow::createVerticalSplitter()
 {
 //does splitter need to be by itself in a VBox layout?
-    splitter = new QSplitter;
+    splitter = new QSplitter(Qt::Vertical, this);
     setCentralWidget(splitter);
     splitter->addWidget(editor);
     splitter->addWidget(jobOutputView);
-    splitter->setResizeMode(jobOutputView, QSplitter::KeepSize);
-    splitter->setCollapsible(editor, false);
+//    splitter->setResizeMode(jobOutputView, QSplitter::KeepSize);
+    int edIndex = splitter->indexOf(editor);
+    splitter->setCollapsible(edIndex, false);
 }
 
 // Do this after setting a new font or size.
@@ -271,8 +380,8 @@ void MainWindow::setTabStops()
     QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
     for (int i = 0; i < tabStop; i++)
         spaces += " ";
-    QFontMetrics metrics(textEdit->font());
-    textEdit->setTabStopWidth(metrics.width(spaces));
+    QFontMetrics metrics(editor->font());
+    editor->setTabStopWidth(metrics.width(spaces));
 }
 
 void MainWindow::textFamily(const QString &f)
@@ -281,7 +390,9 @@ void MainWindow::textFamily(const QString &f)
     font.setFamily(f);
     editor->setFont(font);
     setTabStops();
-    fontChanged(editor->font());
+    updateFontMenus(editor->font());
+    font.setPointSize(12);
+    jobOutputView->setFont(font);
 }
 
 void MainWindow::textSize(const QString &p)
@@ -292,7 +403,9 @@ void MainWindow::textSize(const QString &p)
         font.setPointSize(pointSize);
         editor->setFont(font);
         setTabStops();
-        fontChanged(editor->font());
+        updateFontMenus(editor->font());
+        font.setPointSize(12);
+        jobOutputView->setFont(font);
     }
 }
 
@@ -306,7 +419,7 @@ void MainWindow::clipboardDataChanged()
         actionPaste->setEnabled(md->hasText());
 }
 
-void MainWindow::fontChanged(const QFont &f)
+void MainWindow::updateFontMenus(const QFont &f)
 {
     comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
     comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
@@ -321,59 +434,17 @@ void MainWindow::about()
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
+qDebug("closeEvent");   // why is this being called twice?
     if (maybeSave())
         e->accept();
     else
         e->ignore();
 }
 
-void MainWindow::playScore()
-{
-    QString sco = textEdit->document()->toPlainText();
-    QByteArray ba = sco.toLocal8Bit();
-    char *buf = ba.data();
-    if (!buf)
-        return;
-    const int len = strlen(buf);
-    if (len) {
-        // *** will this return before score plays?
-        // do we need to use dyn mem for buf?
-        int result = RTcmix_parseScore(buf, len);
-        Q_UNUSED(result);
-    }
-//    qDebug("invoked playScore(), buf len: %d, buffer...", len);
-//    qDebug("%s", buf);
-}
-
-void MainWindow::stopScore()
-{
-//#define FLUSH_SCORE_ON_STOP
-#ifdef FLUSH_SCORE_ON_STOP
-    RTcmix_flushScore();
-#else
-    audio->reInitializeRTcmix();
-#endif
-}
-
-void rtcmixPrintCallback(const char *printBuffer, void *inContext)
-{
-    (void) inContext;
-    const char *pbuf = printBuffer;
-    char str[1024];
-    int len = strlen(pbuf);
-    while (len > 0) {
-        strncpy(str, pbuf, 1024);
-        str[len-1] = 0; // get rid of duplicate line ending
-        qDebug("%s", str);
-        pbuf += (len + 1);
-        len = strlen(pbuf);
-    }
-}
-
 void MainWindow::setCurrentFileName(const QString &fileName)
 {
     this->fileName = fileName;
-    textEdit->document()->setModified(false);
+    editor->document()->setModified(false);
 
     QString shownName;
     if (fileName.isEmpty())
@@ -483,4 +554,47 @@ bool MainWindow::fileSaveAs()
     const QString fn = fileDialog.selectedFiles().first();
     setCurrentFileName(fn);
     return fileSave();
+}
+
+void MainWindow::playScore()
+{
+    QString sco = editor->document()->toPlainText();
+    QByteArray ba = sco.toLatin1();
+    char *buf = ba.data();
+    if (!buf)
+        return;
+    const int len = strlen(buf);
+    if (len) {
+        startJobOutput();
+        setScorePrintLevel(5);
+        int result = RTcmix_parseScore(buf, len);
+        Q_UNUSED(result);
+    }
+//qDebug("invoked playScore(), buf len: %d, buffer...", len);
+//qDebug("%s", buf);
+}
+
+void MainWindow::sendScoreFragment(char *fragment)
+{
+    int result = RTcmix_parseScore(fragment, strlen(fragment));
+    Q_UNUSED(result);
+}
+
+void MainWindow::setScorePrintLevel(int level)
+{
+    char buf[32];
+    snprintf(buf, 32, "print_on(%d)\n", level);
+    sendScoreFragment(buf);
+}
+
+void MainWindow::stopScore()
+{
+    stopJobOutput();
+    setScorePrintLevel(0);
+//#define FLUSH_SCORE_ON_STOP
+#ifdef FLUSH_SCORE_ON_STOP
+    RTcmix_flushScore();
+#else
+    audio->reInitializeRTcmix();
+#endif
 }

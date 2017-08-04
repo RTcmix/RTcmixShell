@@ -5,16 +5,17 @@ TARGET          = RTcmixShell
 
 HEADERS         = audio.h \
                   highlighter.h \
+                  mainwindow.h \
+                  pa_memorybarrier.h \
+                  pa_ringbuffer.h \
                   portaudio.h \
-                  RTcmix_API.h \
-                  textedit.h \
-    mainwindow.h
+                  RTcmix_API.h
 
 SOURCES         = audio.cpp \
                   highlighter.cpp \
+                  mainwindow.cpp \
                   main.cpp \
-                  textedit.cpp \
-    mainwindow.cpp
+                  pa_ringbuffer.c
 
 RESOURCES += RTcmixShell.qrc
 

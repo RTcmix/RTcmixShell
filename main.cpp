@@ -49,7 +49,7 @@
 ****************************************************************************/
 
 #include "audio.h"
-#include "textedit.h"
+#include "mainwindow.h"
 
 #include <QApplication>
 #include <QDesktopWidget>
@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
     parser.addPositionalArgument("file", "The file to open.");
     parser.process(a);
 
-    Editor mw;
+    MainWindow mw;
 
     const QRect availableGeometry = QApplication::desktop()->availableGeometry(&mw);
     mw.resize(availableGeometry.width() / 2, (availableGeometry.height() * 2) / 3);
