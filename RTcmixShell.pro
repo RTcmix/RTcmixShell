@@ -9,13 +9,15 @@ HEADERS         = audio.h \
                   pa_memorybarrier.h \
                   pa_ringbuffer.h \
                   portaudio.h \
-                  RTcmix_API.h
+                  RTcmix_API.h \
+                  rtcmixlogview.h
 
 SOURCES         = audio.cpp \
                   highlighter.cpp \
                   mainwindow.cpp \
                   main.cpp \
-                  pa_ringbuffer.c
+                  pa_ringbuffer.c \
+                  rtcmixlogview.cpp
 
 RESOURCES += RTcmixShell.qrc
 

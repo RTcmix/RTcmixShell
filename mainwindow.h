@@ -2,19 +2,17 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "pa_ringbuffer.h"
 
 QT_BEGIN_NAMESPACE
 class QAction;
 class QComboBox;
 class QFontComboBox;
 class QMenu;
-class QPlainTextEdit;
 class QSplitter;
 class QTextEdit;
-class QTimer;
 QT_END_NAMESPACE
 class Audio;
+class RTcmixLogView;
 
 #define VERSION_STR	"v1.0b2"
 
@@ -41,8 +39,6 @@ private slots:
     void textSize(const QString &p);
     void clipboardDataChanged();
     void cursorPositionChanged();
-    void clearJobOutput();
-    void checkJobOutput();
 
 private:
     void createActions();
@@ -54,23 +50,19 @@ private:
     void createToolbars();
     void setDefaultFont();
     void createEditors();
-    void createJobOutputView();
-    void startJobOutput();
-    void printJobOutputSeparator();
-    void stopJobOutput();
     void createVerticalSplitter();
     void setCurrentFileName(const QString &fileName);
     bool maybeSave();
     void updateFontMenus(const QFont &f);
     void setTabStops();
-    void sendScoreFragment(char *);
     void setScorePrintLevel(int);
+    void sendScoreFragment(char *);
 
     Audio *audio;
+    RTcmixLogView *rtcmixLogView;
     QSplitter *splitter;
     QString fileName;
     QTextEdit *editor;
-    QPlainTextEdit *jobOutputView;
     QAction *actionNewFile;
     QAction *actionOpenFile;
     QAction *actionSaveFile;
@@ -84,17 +76,12 @@ private:
     QAction *actionPlay;
     QAction *actionStop;
     QAction *actionRecord;
-    QAction *actionClearJobOutput;
+    QAction *actionClearLog;
     QMenu *fileMenu;
     QMenu *editMenu;
     QMenu *scoreMenu;
     QFontComboBox *comboFont;
     QComboBox *comboSize;
-    QTimer *jobOutputTimer;
-
-    PaUtilRingBuffer jobOutputRingBuffer;
-    char *ringBufferBlock;
-    char *tmpJobOutputBlock;
 
     bool firstFileDlog;
 };
