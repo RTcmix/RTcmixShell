@@ -27,16 +27,28 @@
 #include "mainwindow.h"
 #include "RTcmix_API.h"
 
-void rtcmixPrintCallback(const char *printBuffer, void *inContext);
-
 #ifdef Q_OS_MAC
 const QString rsrcPath = ":/images/mac";
 #else
 const QString rsrcPath = ":/images/win";
 #endif
 
-const int ringBufferNumChars = 1024 * 128;
-const int jobOutputTimerInterval = 100; // msec
+// Output messages arrive on an RTcmix thread in rtcmixPrintCallback(). We cannot
+// simply print these to the window, because Qt GUI widget objects are not thread
+// safe: you can call into them only from the main GUI thread. Instead, we use a
+// ring buffer to move the incoming messages over to checkJobOutput(), invoked
+// from a timer in the main thread. The buffer is a single block comprising many
+// equal-sized strings. Usually, these won't be filled to capacity.
+
+#define RTCMIX_PRINT_DEBUG
+
+void rtcmixPrintCallback(const char *printBuffer, void *inContext);
+
+// NB: WAVETABLE4.sco blows past 4096 strings
+const int ringBufferNumStrings = 8192;      // must be power of 2
+const int ringBufferStringCapacity = 128;   // ditto
+const int jobOutputTimerInterval = 10;      // msec
+const int jobOutputViewMaxLines = 8192;
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -46,6 +58,8 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     setWindowTitle(QCoreApplication::applicationName());
     firstFileDlog = true;
+
+    audio = new Audio;
 
     createActions();    // must come before editors
     createMenus();
@@ -59,7 +73,7 @@ MainWindow::MainWindow(QWidget *parent)
     setAcceptDrops(true);
     jobOutputView->viewport()->setAcceptDrops(false);
 
-    audio = new Audio;
+    editor->setFocus();
 }
 
 void MainWindow::createActions()
@@ -149,6 +163,11 @@ void MainWindow::createScoreActions()
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
     connect(actionRecord, &QAction::triggered, this, &MainWindow::record);
 #endif
+
+    actionClearJobOutput = new QAction(tr("&Clear"), this);
+    actionClearJobOutput->setShortcut(Qt::CTRL + Qt::Key_B);
+    actionClearJobOutput->setStatusTip(tr("Clear the score report area at the bottom of the window"));
+    connect(actionClearJobOutput, &QAction::triggered, this, &MainWindow::clearJobOutput);
 }
 
 void MainWindow::createTextActions()
@@ -180,6 +199,8 @@ void MainWindow::createMenus()
 #ifdef NOTYET
     scoreMenu->addAction(actionRecord);
 #endif
+    scoreMenu->addSeparator();
+    scoreMenu->addAction(actionClearJobOutput);
 
     QMenu *helpMenu = menuBar()->addMenu(tr("Help"));
     helpMenu->addAction(tr("About"), this, &MainWindow::about);
@@ -257,52 +278,73 @@ void MainWindow::createEditors()
     actionCut->setEnabled(false);
     actionCopy->setEnabled(false);
 
-    editor->setFocus();
     setCurrentFileName(QString(tr("untitled.sco")));
 }
 
-// This is called from one of the RTcmix threads, incl. the high-priority
-// audio thread. Since Qt GUI widgets cannot operate in more than one thread,
-// and since we don't want to put GUI code in the high-priority thread, we
-// use a ring buffer to ship the job output text from here to the main GUI
-// thread before printing to the window.
 void rtcmixPrintCallback(const char *printBuffer, void *inContext)
 {
     // This is complicated, because we don't know how large printBuffer is,
     // only that it comprises any number of C-strings laid end-to-end.
+    // The end of the buffer is marked by at least two consecutive nulls.
     PaUtilRingBuffer *ringBuf = reinterpret_cast<PaUtilRingBuffer *>(inContext);
-    const char *pbuf = printBuffer;
-    char str[1024];
-    //FIXME: need to seek into first non-null char -- maybe that never happens, though
-    int len = strlen(pbuf); // not incl. term. null
-    while (len > 0) {
-        strncpy(str, pbuf, 1024);
-        str[len] = 0; // strncpy does not guarantee null termination
-        ring_buffer_size_t rbCount = PaUtil_GetRingBufferWriteAvailable(ringBuf);
-        if (rbCount < len) {
-            qDebug("rtcmixPrintCallback: not enough ring buffer space for incoming data");
-            str[rbCount-1] = 0;
+
+    // Skip initial null; return if there are two consecutive nulls.
+    const char *p = printBuffer;
+    if (p[0] == 0) {
+        if (p[1] == 0) {
+            qDebug("rtcmixPrintCallback: printBuffer begins with two nulls");
+            return;
         }
-        rbCount = PaUtil_WriteRingBuffer(ringBuf, str, len);
-//qDebug("PRINT (%d): %s", rbCount, str);
-        pbuf += (len + 1);  // skip to next C-string
-        len = strlen(pbuf);
+        else
+            p++;
     }
+
+#ifdef RTCMIX_PRINT_DEBUG
+    int numstr = 0;
+    int maxlen = 0;
+    int totlen = 0;
+#endif
+    while (PaUtil_GetRingBufferWriteAvailable(ringBuf)) {
+        int len = strlen(p) + 1;                 // including terminal null
+        if (len > ringBufferStringCapacity) {    // break it into pieces (not likely)
+            qDebug("rtcmixPrintCallback: incoming string too long (%d)", len);
+#ifdef NOCANDO
+            p[ringBufferStringCapacity - 1] = 0;
+#endif
+            len = ringBufferStringCapacity;
+        }
+        int rbCount = PaUtil_WriteRingBuffer(ringBuf, p, 1);
+        if (rbCount != 1)
+            qDebug("rtcmixPrintCallback: PaUtil_WriteRingBuffer failure");
+#ifdef RTCMIX_PRINT_DEBUG
+        maxlen = qMax(maxlen, len);
+        totlen += len;
+        numstr++;
+#endif
+        p += len;   // skip to next C-string
+        if (*p == 0)
+            break;
+    }
+#ifdef RTCMIX_PRINT_DEBUG
+    qDebug("rtcmixPrintCallback: %d strings written, total len: %d, max len: %d", numstr, totlen, maxlen);
+#endif
 }
 
 void MainWindow::createJobOutputView()
 {
     jobOutputView = new QPlainTextEdit(this);
     jobOutputView->setReadOnly(true);
+    jobOutputView->setMaximumBlockCount(jobOutputViewMaxLines);
 
     // set background to very light gray
     QPalette p = jobOutputView->palette();
-    p.setColor(QPalette::Active, QPalette::Base, QColor(245, 245, 245));
-    p.setColor(QPalette::Inactive, QPalette::Base, QColor(245, 245, 245));
+    p.setColor(QPalette::Active, QPalette::Base, QColor(240, 240, 240));
+    p.setColor(QPalette::Inactive, QPalette::Base, QColor(240, 240, 240));
     jobOutputView->setPalette(p);
 
-    ringBufferBlock = (char *) calloc(ringBufferNumChars, sizeof(char));
-    PaUtil_InitializeRingBuffer(&jobOutputRingBuffer, sizeof(char), ringBufferNumChars, ringBufferBlock);
+    // set up the ring buffer
+    ringBufferBlock = (char *) calloc(ringBufferNumStrings, ringBufferStringCapacity);
+    PaUtil_InitializeRingBuffer(&jobOutputRingBuffer, ringBufferStringCapacity, ringBufferNumStrings, ringBufferBlock);
     RTcmix_setPrintCallback(rtcmixPrintCallback, &jobOutputRingBuffer);
 
     jobOutputTimer = new QTimer(this);
@@ -311,48 +353,54 @@ void MainWindow::createJobOutputView()
 
 void MainWindow::startJobOutput()
 {
-    // this just resets the read and write pointers
+    // this just resets the read and write pointers; does not clear block
     PaUtil_FlushRingBuffer(&jobOutputRingBuffer);
 
-    // clear the block held by the ring buffer
-    char *p = ringBufferBlock;
-    int len = ringBufferNumChars;
-    while (len-- > 0)
-        *p++ = 0;
-
-    jobOutputView->clear();
     if (!jobOutputTimer->isActive())
         jobOutputTimer->start(jobOutputTimerInterval);
 }
 
-// this runs periodically while user plays a score
+void MainWindow::clearJobOutput()
+{
+    jobOutputView->clear();
+}
+
+void MainWindow::printJobOutputSeparator()
+{
+    QString shownName;
+    if (this->fileName.isEmpty())
+        shownName = "untitled.sco";
+    else
+        shownName = QFileInfo(this->fileName).fileName();
+    jobOutputView->appendPlainText(QString(
+            tr("\n++++++++++ PLAYING SCORE: %1 ++++++++++\n")).arg(shownName));
+    jobOutputView->moveCursor(QTextCursor::End);
+}
+
+// this runs periodically while user plays a score, invoked by a timer
 void MainWindow::checkJobOutput()
 {
-    char buf[1024], str[1024];
-    while (1) {
-        bzero(buf, 1024);
-        ring_buffer_size_t rbCount = PaUtil_GetRingBufferReadAvailable(&jobOutputRingBuffer);
-        if (rbCount <= 0)
-            break;
-        PaUtil_ReadRingBuffer(&jobOutputRingBuffer, buf, rbCount);
-        if (buf[rbCount-1] != 0)
-            qDebug("buf last char not null: '%c'", buf[rbCount-1]);
-qDebug("rbCount: %d, buf: %p, buflen: %ld", rbCount, buf, strlen(buf));
-        char *pbuf = buf;
-        int len = strlen(pbuf);   // not incl. term. null
-        while (len > 0) {
-#if 1
-            jobOutputView->appendPlainText(QString(pbuf));
-#else
-            strncpy(str, pbuf, 1024);
-            str[len] = 0; // strncpy does not guarantee null termination
-            jobOutputView->appendPlainText(QString(str));
-#endif
-            pbuf += (len + 1);  // skip to next C-string
-            len = strlen(pbuf);
+    bool wroteSome = false;
+
+    while (PaUtil_GetRingBufferReadAvailable(&jobOutputRingBuffer)) {
+        char buf[ringBufferStringCapacity + 16];
+        int rbCount = PaUtil_ReadRingBuffer(&jobOutputRingBuffer, buf, 1);
+        if (rbCount != 1)
+            qDebug("checkJobOutput: PaUtil_ReadRingBuffer failure");
+        // It is possible for buf to be unterminated, in case incoming string
+        // was longer than ringBufferStringCapacity and needed to be broken up.
+        // Here we simply print the string across multiple lines.
+        buf[ringBufferStringCapacity] = 0;  // append null for benefit of QString, but within buf block
+        int len = strlen(buf);
+        if (len) {
+            if (buf[len-1] == '\n')   // chomp line ending, since appendPlainText adds one
+                buf[len-1] = 0;
+            jobOutputView->appendPlainText(QString(buf));
+            wroteSome = true;
         }
     }
-    jobOutputView->moveCursor(QTextCursor::End);
+    if (wroteSome)
+        jobOutputView->moveCursor(QTextCursor::End);
 }
 
 void MainWindow::stopJobOutput()
@@ -367,8 +415,10 @@ void MainWindow::createVerticalSplitter()
     setCentralWidget(splitter);
     splitter->addWidget(editor);
     splitter->addWidget(jobOutputView);
-//    splitter->setResizeMode(jobOutputView, QSplitter::KeepSize);
     int edIndex = splitter->indexOf(editor);
+    int joIndex = splitter->indexOf(jobOutputView);
+    splitter->setStretchFactor(edIndex, 1);
+    splitter->setStretchFactor(joIndex, 0);
     splitter->setCollapsible(edIndex, false);
 }
 
@@ -567,6 +617,7 @@ void MainWindow::playScore()
     if (len) {
         startJobOutput();
         setScorePrintLevel(5);
+        printJobOutputSeparator();
         int result = RTcmix_parseScore(buf, len);
         Q_UNUSED(result);
     }
@@ -582,9 +633,11 @@ void MainWindow::sendScoreFragment(char *fragment)
 
 void MainWindow::setScorePrintLevel(int level)
 {
+#ifdef NOTYET // FIXME: test longchain.sco first
     char buf[32];
     snprintf(buf, 32, "print_on(%d)\n", level);
     sendScoreFragment(buf);
+#endif
 }
 
 void MainWindow::stopScore()

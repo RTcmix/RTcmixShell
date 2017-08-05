@@ -41,6 +41,7 @@ private slots:
     void textSize(const QString &p);
     void clipboardDataChanged();
     void cursorPositionChanged();
+    void clearJobOutput();
     void checkJobOutput();
 
 private:
@@ -55,6 +56,7 @@ private:
     void createEditors();
     void createJobOutputView();
     void startJobOutput();
+    void printJobOutputSeparator();
     void stopJobOutput();
     void createVerticalSplitter();
     void setCurrentFileName(const QString &fileName);
@@ -82,6 +84,7 @@ private:
     QAction *actionPlay;
     QAction *actionStop;
     QAction *actionRecord;
+    QAction *actionClearJobOutput;
     QMenu *fileMenu;
     QMenu *editMenu;
     QMenu *scoreMenu;
@@ -91,6 +94,7 @@ private:
 
     PaUtilRingBuffer jobOutputRingBuffer;
     char *ringBufferBlock;
+    char *tmpJobOutputBlock;
 
     bool firstFileDlog;
 };
