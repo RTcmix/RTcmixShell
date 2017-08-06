@@ -14,6 +14,7 @@ class QTextEdit;
 class QTimer;
 QT_END_NAMESPACE
 class Audio;
+class Editor;
 class RTcmixLogView;
 
 #define VERSION_STR	"v1.0b2"
@@ -41,7 +42,6 @@ private slots:
     void textFamily(const QString &f);
     void textSize(const QString &p);
     void clipboardDataChanged();
-    void cursorPositionChanged();
     void checkScoreFinished();
     void setScorePlayMode();
 
@@ -65,10 +65,10 @@ private:
     void sendScoreFragment(char *);
 
     Audio *audio;
+    Editor *curEditor;
     RTcmixLogView *rtcmixLogView;
     QSplitter *splitter;
     QString fileName;
-    QTextEdit *editor;
     QAction *actionNewFile;
     QAction *actionOpenFile;
     QAction *actionSaveFile;
@@ -101,18 +101,5 @@ private:
     ScorePlayMode scorePlayMode;
     bool firstFileDialog;
 };
-
-// NB: This comes from the Spectrum Qt example.
-// Macro which connects a signal to a slot, and which causes application to
-// abort if the connection fails.  This is intended to catch programming errors
-// such as mis-typing a signal or slot name.  It is necessary to write our own
-// macro to do this - the following idiom
-//     Q_ASSERT(connect(source, signal, receiver, slot));
-// will not work because Q_ASSERT compiles to a no-op in release builds.
-
-#define CHECKED_CONNECT(source, signal, receiver, slot) \
-    if (!connect(source, signal, receiver, slot)) \
-        qt_assert_x(Q_FUNC_INFO, "CHECKED_CONNECT failed", __FILE__, __LINE__);
-
 
 #endif // MAINWINDOW_H

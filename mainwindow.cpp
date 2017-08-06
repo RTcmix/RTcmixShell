@@ -3,10 +3,12 @@
 #include <QtDebug>
 
 #include "audio.h"
+#include "editor.h"
 #include "highlighter.h"
 #include "rtcmixlogview.h"
 #include "mainwindow.h"
 #include "RTcmix_API.h"
+#include "utils.h"
 
 #ifdef Q_OS_MAC
 const QString rsrcPath = ":/images/mac";
@@ -48,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
     setScorePlayMode(); // defaults to Exclusive, because menu action initially unchecked
 
-    editor->setFocus();
+    curEditor->setFocus();
 }
 
 void MainWindow::createActions()
@@ -75,9 +77,9 @@ void MainWindow::createFileActions()
     actionSaveFile = new QAction(tr("&Save"), this);
     actionSaveFile->setShortcut(QKeySequence::Save);
     actionSaveFile->setStatusTip(tr("Save the edited score to disk"));
-    actionSaveFile->setEnabled(editor->document()->isModified());
+    actionSaveFile->setEnabled(curEditor->document()->isModified());
     CHECKED_CONNECT(actionSaveFile, &QAction::triggered, this, &MainWindow::fileSave);
-    CHECKED_CONNECT(editor->document(), &QTextDocument::modificationChanged, actionSaveFile, &QAction::setEnabled);
+    CHECKED_CONNECT(curEditor->document(), &QTextDocument::modificationChanged, actionSaveFile, &QAction::setEnabled);
 
     actionSaveFileAs = new QAction(tr("Save &As..."), this);
     actionSaveFileAs->setShortcut(QKeySequence::SaveAs);
@@ -95,33 +97,33 @@ void MainWindow::createEditActions()
     actionUndo = new QAction(tr("&Undo"), this);
     actionUndo->setShortcut(QKeySequence::Undo);
     actionUndo->setStatusTip(tr("Undo the last operation"));
-    actionUndo->setEnabled(editor->document()->isUndoAvailable());
-    CHECKED_CONNECT(actionUndo, &QAction::triggered, editor, &QTextEdit::undo);
-    CHECKED_CONNECT(editor->document(), &QTextDocument::undoAvailable, actionUndo, &QAction::setEnabled);
+    actionUndo->setEnabled(curEditor->document()->isUndoAvailable());
+    CHECKED_CONNECT(actionUndo, &QAction::triggered, curEditor, &QTextEdit::undo);
+    CHECKED_CONNECT(curEditor->document(), &QTextDocument::undoAvailable, actionUndo, &QAction::setEnabled);
 
     actionRedo = new QAction(tr("&Redo"), this);
     actionRedo->setShortcut(QKeySequence::Redo);
     actionRedo->setStatusTip(tr("Redo the last operation"));
-    actionRedo->setEnabled(editor->document()->isRedoAvailable());
-    CHECKED_CONNECT(actionRedo, &QAction::triggered, editor, &QTextEdit::redo);
-    CHECKED_CONNECT(editor->document(), &QTextDocument::redoAvailable, actionRedo, &QAction::setEnabled);
+    actionRedo->setEnabled(curEditor->document()->isRedoAvailable());
+    CHECKED_CONNECT(actionRedo, &QAction::triggered, curEditor, &QTextEdit::redo);
+    CHECKED_CONNECT(curEditor->document(), &QTextDocument::redoAvailable, actionRedo, &QAction::setEnabled);
 
     actionCut = new QAction(tr("Cu&t"), this);
     actionCut->setShortcut(QKeySequence::Cut);
     actionCut->setStatusTip(tr("Cut the current selection to the clipboard"));
     actionCut->setEnabled(false);
-    CHECKED_CONNECT(actionCut, &QAction::triggered, editor, &QTextEdit::cut);
+    CHECKED_CONNECT(actionCut, &QAction::triggered, curEditor, &QTextEdit::cut);
 
     actionCopy = new QAction(tr("&Copy"), this);
     actionCopy->setShortcut(QKeySequence::Copy);
     actionCopy->setStatusTip(tr("Copy the current selection to the clipboard"));
     actionCopy->setEnabled(false);
-    CHECKED_CONNECT(actionCopy, &QAction::triggered, editor, &QTextEdit::copy);
+    CHECKED_CONNECT(actionCopy, &QAction::triggered, curEditor, &QTextEdit::copy);
 
     actionPaste = new QAction(tr("&Paste"), this);
     actionPaste->setShortcut(QKeySequence::Paste);
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
-    CHECKED_CONNECT(actionPaste, &QAction::triggered, editor, &QTextEdit::paste);
+    CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QTextEdit::paste);
 
     CHECKED_CONNECT(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::clipboardDataChanged);
 }
@@ -261,22 +263,20 @@ void MainWindow::setDefaultFont()
     textFont.setStyleHint(QFont::Monospace);
     textFont.setFixedPitch(true);
     textFont.setPointSize(12);
-    editor->setFont(textFont);
+    curEditor->setFont(textFont);
     rtcmixLogView->setFont(textFont);
-    updateFontMenus(editor->font());
+    updateFontMenus(curEditor->font());
     setTabStops();
 }
 
 // NB: plural, in anticipation of tabbed editors
+// The member name <curEditor> because of this.
 void MainWindow::createEditors()
 {
-    editor = new QTextEdit(this);
-    Highlighter *h = new Highlighter(editor->document());
-    Q_UNUSED(h);
+    Editor *e = new Editor(this);
+    curEditor = e;
     setCurrentFileName(QString(tr("untitled.sco")));
-    setWindowModified(editor->document()->isModified());
-    CHECKED_CONNECT(editor->document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
-    CHECKED_CONNECT(editor, &QTextEdit::cursorPositionChanged, this, &MainWindow::cursorPositionChanged);
+    setWindowModified(curEditor->document()->isModified());
 }
 
 void MainWindow::createVerticalSplitter()
@@ -284,9 +284,9 @@ void MainWindow::createVerticalSplitter()
 //does splitter need to be by itself in a VBox layout?
     splitter = new QSplitter(Qt::Vertical, this);
     setCentralWidget(splitter);
-    splitter->addWidget(editor);
+    splitter->addWidget(curEditor);
     splitter->addWidget(rtcmixLogView);
-    int edIndex = splitter->indexOf(editor);
+    int edIndex = splitter->indexOf(curEditor);
     int joIndex = splitter->indexOf(rtcmixLogView);
     splitter->setStretchFactor(edIndex, 1);
     splitter->setStretchFactor(joIndex, 0);
@@ -301,17 +301,17 @@ void MainWindow::setTabStops()
     QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
     for (int i = 0; i < tabStop; i++)
         spaces += " ";
-    QFontMetrics metrics(editor->font());
-    editor->setTabStopWidth(metrics.width(spaces));
+    QFontMetrics metrics(curEditor->font());
+    curEditor->setTabStopWidth(metrics.width(spaces));
 }
 
 void MainWindow::textFamily(const QString &f)
 {
-    QFont font = editor->font();
+    QFont font = curEditor->font();
     font.setFamily(f);
-    editor->setFont(font);
+    curEditor->setFont(font);
     setTabStops();
-    updateFontMenus(editor->font());
+    updateFontMenus(curEditor->font());
     font.setPointSize(12);
     rtcmixLogView->setFont(font);
 }
@@ -320,18 +320,14 @@ void MainWindow::textSize(const QString &p)
 {
     qreal pointSize = p.toFloat();
     if (pointSize > 0) {
-        QFont font = editor->font();
+        QFont font = curEditor->font();
         font.setPointSize(pointSize);
-        editor->setFont(font);
+        curEditor->setFont(font);
         setTabStops();
-        updateFontMenus(editor->font());
+        updateFontMenus(curEditor->font());
         font.setPointSize(logFontSize);
         rtcmixLogView->setFont(font);
     }
-}
-
-void MainWindow::cursorPositionChanged()
-{
 }
 
 void MainWindow::clipboardDataChanged()
@@ -368,7 +364,7 @@ void MainWindow::closeEvent(QCloseEvent *e)
 void MainWindow::setCurrentFileName(const QString &fileName)
 {
     this->fileName = fileName;
-    editor->document()->setModified(false);
+    curEditor->document()->setModified(false);
 
     QString shownName;
     if (fileName.isEmpty())
@@ -383,7 +379,7 @@ void MainWindow::setCurrentFileName(const QString &fileName)
 void MainWindow::fileNew()
 {
     if (maybeSave()) {
-        editor->clear();
+        curEditor->clear();
         setCurrentFileName(QString());
     }
 }
@@ -401,7 +397,7 @@ bool MainWindow::loadFile(const QString &f)
     QTextCodec *codec = Qt::codecForHtml(data);
     QString str = codec->toUnicode(data);
     str = QString::fromLocal8Bit(data);
-    editor->setPlainText(str);
+    curEditor->setPlainText(str);
     setCurrentFileName(f);
     return true;
 }
@@ -427,7 +423,7 @@ void MainWindow::fileOpen()
 
 bool MainWindow::maybeSave()
 {
-    if (!editor->document()->isModified())
+    if (!curEditor->document()->isModified())
         return true;
 
     const QMessageBox::StandardButton ret =
@@ -458,8 +454,8 @@ bool MainWindow::fileSave()
         return false;
     }
     QTextStream out(&file);
-    out << editor->toPlainText();
-    editor->document()->setModified(false);
+    out << curEditor->toPlainText();
+    curEditor->document()->setModified(false);
     return true;
 }
 
@@ -542,7 +538,7 @@ void MainWindow::xableScoreActions(bool starting)
 
 void MainWindow::playScore()
 {
-    QString sco = editor->document()->toPlainText();
+    QString sco = curEditor->document()->toPlainText();
     QByteArray ba = sco.toLatin1();
     char *buf = ba.data();
     if (!buf)

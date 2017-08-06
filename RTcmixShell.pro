@@ -4,15 +4,18 @@ TEMPLATE        = app
 TARGET          = RTcmixShell
 
 HEADERS         = audio.h \
+                  editor.h \
                   highlighter.h \
                   mainwindow.h \
                   pa_memorybarrier.h \
                   pa_ringbuffer.h \
                   portaudio.h \
                   RTcmix_API.h \
-                  rtcmixlogview.h
+                  rtcmixlogview.h \
+                  utils.h
 
 SOURCES         = audio.cpp \
+                  editor.cpp \
                   highlighter.cpp \
                   mainwindow.cpp \
                   main.cpp \
