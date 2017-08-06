@@ -1,25 +1,5 @@
 
-#include <QAction>
-#include <QApplication>
-#include <QClipboard>
-#include <QCloseEvent>
-#include <QComboBox>
-#include <QFile>
-#include <QFileDialog>
-#include <QFileInfo>
-#include <QFontComboBox>
-#include <QFontDatabase>
-#include <QMenu>
-#include <QMenuBar>
-#include <QMessageBox>
-#include <QMimeData>
-#include <QPlainTextEdit>
-#include <QSplitter>
-#include <QStatusBar>
-#include <QTextCodec>
-#include <QTextEdit>
-#include <QTimer>
-#include <QToolBar>
+#include <QtWidgets>
 #include <QtDebug>
 
 #include "audio.h"
@@ -35,9 +15,12 @@ const QString rsrcPath = ":/images/win";
 #endif
 
 const int logFontSize = 12;
+const int scoreFinishedTimerInterval = 100; // msec
 
-MainWindow::MainWindow(QWidget *parent)
-    : QMainWindow(parent)
+void rtcmixFinishedCallback(long long frameCount, void *inContext);
+
+
+MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
 {
 #ifdef Q_OS_OSX
     setUnifiedTitleAndToolBarOnMac(true);
@@ -59,7 +42,24 @@ MainWindow::MainWindow(QWidget *parent)
 
     setAcceptDrops(true);
 
+    RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
+    scoreFinishedTimer = new QTimer(this);
+    connect(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
+
     editor->setFocus();
+}
+
+void rtcmixFinishedCallback(long long frameCount, void *inContext)
+{
+    (void) frameCount;
+    MainWindow *thisclass = reinterpret_cast<MainWindow *>(inContext);
+    thisclass->scoreFinished = true;
+}
+
+void MainWindow::checkScoreFinished()
+{
+    if (scoreFinished)
+        stopScore();
 }
 
 void MainWindow::createActions()
@@ -139,25 +139,21 @@ void MainWindow::createEditActions()
 
 void MainWindow::createScoreActions()
 {
-    const QIcon playIcon = QIcon::fromTheme("media-playback-start", QIcon(rsrcPath + "/play.png"));
-//    const QIcon playIcon = style()->standardIcon(QStyle::SP_MediaPlay);
-    actionPlay = new QAction(playIcon, tr("&Play"), this);
+    actionPlay = new QAction(tr("&Play"), this);
     actionPlay->setShortcut(Qt::CTRL + Qt::Key_P);
     actionPlay->setStatusTip(tr("Play the score"));
     CHECKED_CONNECT(actionPlay, &QAction::triggered, this, &MainWindow::playScore);
 
-    const QIcon stopIcon = QIcon::fromTheme("media-playback-stop", QIcon(rsrcPath + "/stop.png"));
- //   const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
-    actionStop = new QAction(stopIcon, tr("&Stop"), this);
+    actionStop = new QAction(tr("&Stop"), this);
     actionStop->setShortcut(Qt::CTRL + Qt::Key_Period);
     actionStop->setStatusTip(tr("Stop playing the score"));
+    actionStop->setEnabled(false);
     CHECKED_CONNECT(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
 #ifdef NOTYET
     const QIcon recordIcon = QIcon::fromTheme("media-record", QIcon(rsrcPath + "/record.png"));
     actionRecord = new QAction(recordIcon, tr("&Record"), this);
     actionRecord->setShortcut(Qt::CTRL + Qt::Key_R);
-    actionRecord->setShortcut(QKeySequence::Record);
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
     CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
 #endif
@@ -207,17 +203,41 @@ void MainWindow::createMenus()
 
 void MainWindow::createToolbars()
 {
-//TODO: look into QToolButton as a better solution for play/stop, etc. Leave icons out of the menus.
-    setToolButtonStyle(Qt::ToolButtonFollowStyle);
+    setToolButtonStyle(Qt::ToolButtonFollowStyle);  // necessary?
 
     QToolBar *tb = addToolBar(tr("Score"));
-    tb->addAction(actionPlay);
-    tb->addAction(actionStop);
+    const QSize buttonSize(20, 30);
+
+    playButton = new QPushButton("Play", this);
+    const QIcon playIcon = style()->standardIcon(QStyle::SP_MediaPlay);
+    playButton->setIcon(playIcon);
+    playButton->setEnabled(true);
+    playButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    playButton->setMinimumSize(buttonSize);
+    tb->addWidget(playButton);
+    CHECKED_CONNECT(playButton, SIGNAL(clicked()), this, SLOT(playScore()));
+
+    stopButton = new QPushButton("Stop", this);
+    const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
+    stopButton->setIcon(stopIcon);
+    stopButton->setEnabled(false);
+    stopButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    stopButton->setMinimumSize(buttonSize);
+    tb->addWidget(stopButton);
+    CHECKED_CONNECT(stopButton, SIGNAL(clicked()), this, SLOT(stopScore()));
+
 #ifdef NOTYET
-    tb->addAction(actionRecord);
+    recordButton = new QPushButton("Record", this);
+    const QIcon recordIcon = QIcon(rsrcPath + "/record.png");
+    recordButton->setIcon(recordIcon);
+    recordButton->setEnabled(true);
+    recordButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    recordButton->setMinimumSize(buttonSize);
+    tb->addWidget(recordButton);
+    CHECKED_CONNECT(recordButton, SIGNAL(clicked()), this, SLOT(record()));
 #endif
-    QPushButton *testButton = new QPushButton("Test", this);
-    tb->addWidget(testButton);
+
+    // font family/size popups -------------------------------------
 
     tb = addToolBar(tr("Text"));
     tb->setAllowedAreas(Qt::TopToolBarArea | Qt::BottomToolBarArea);
@@ -473,10 +493,17 @@ void MainWindow::playScore()
         rtcmixLogView->startLog();
         setScorePrintLevel(5);
         rtcmixLogView->printLogSeparator(this->fileName);
+        actionPlay->setEnabled(false);
+        playButton->setEnabled(false);
+        actionStop->setEnabled(true);
+        stopButton->setEnabled(true);
+        scoreFinished = false;
+        if (!scoreFinishedTimer->isActive())
+            scoreFinishedTimer->start(scoreFinishedTimerInterval);
         int result = RTcmix_parseScore(buf, len);
         Q_UNUSED(result);
     }
-//qDebug("invoked playScore(), buf len: %d, buffer...", len);
+qDebug("invoked playScore(), buf len: %d, buffer...", len);
 //qDebug("%s", buf);
 }
 
@@ -497,6 +524,9 @@ void MainWindow::setScorePrintLevel(int level)
 
 void MainWindow::stopScore()
 {
+    scoreFinishedTimer->stop();
+    actionStop->setEnabled(false);
+    stopButton->setEnabled(false);
     rtcmixLogView->stopLog();
     setScorePrintLevel(0);
 //#define FLUSH_SCORE_ON_STOP
@@ -505,4 +535,6 @@ void MainWindow::stopScore()
 #else
     audio->reInitializeRTcmix();
 #endif
+    actionPlay->setEnabled(true);
+    playButton->setEnabled(true);
 }

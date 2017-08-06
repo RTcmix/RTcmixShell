@@ -8,8 +8,10 @@ class QAction;
 class QComboBox;
 class QFontComboBox;
 class QMenu;
+class QPushButton;
 class QSplitter;
 class QTextEdit;
+class QTimer;
 QT_END_NAMESPACE
 class Audio;
 class RTcmixLogView;
@@ -24,6 +26,7 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     void fileNew();
     bool loadFile(const QString &f);
+    bool scoreFinished;
 
 protected:
     void closeEvent(QCloseEvent *e) override;
@@ -39,6 +42,7 @@ private slots:
     void textSize(const QString &p);
     void clipboardDataChanged();
     void cursorPositionChanged();
+    void checkScoreFinished();
 
 private:
     void createActions();
@@ -80,8 +84,12 @@ private:
     QMenu *fileMenu;
     QMenu *editMenu;
     QMenu *scoreMenu;
+    QPushButton *playButton;
+    QPushButton *stopButton;
+    QPushButton *recordButton;
     QFontComboBox *comboFont;
     QComboBox *comboSize;
+    QTimer *scoreFinishedTimer;
 
     bool firstFileDlog;
 };
