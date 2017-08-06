@@ -46,6 +46,7 @@
 #include "audio.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
+#include "utils.h"
 
 const float DefaultSamplingRate = 44100.0;
 const int DefaultNumInChannels = 0;
@@ -262,7 +263,7 @@ void Audio::initializeWindow()
         if (deviceInfo != defaultDeviceInfo)
             m_deviceBox->addItem(deviceInfo.deviceName(), qVariantFromValue(deviceInfo));
     }
-    connect(m_deviceBox,SIGNAL(activated(int)),SLOT(deviceChanged(int)));
+    CHECKED_CONNECT(m_deviceBox,SIGNAL(activated(int)),SLOT(deviceChanged(int)));
     layout->addWidget(m_deviceBox);
 
     QHBoxLayout *volumeBox = new QHBoxLayout;
@@ -272,7 +273,7 @@ void Audio::initializeWindow()
     m_volumeSlider->setMinimum(0);
     m_volumeSlider->setMaximum(100);
     m_volumeSlider->setSingleStep(10);
-    connect(m_volumeSlider, SIGNAL(valueChanged(int)), this, SLOT(volumeChanged(int)));
+    CHECKED_CONNECT(m_volumeSlider, SIGNAL(valueChanged(int)), this, SLOT(volumeChanged(int)));
     volumeBox->addWidget(m_volumeLabel);
     volumeBox->addWidget(m_volumeSlider);
     layout->addLayout(volumeBox);

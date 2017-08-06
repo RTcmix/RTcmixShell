@@ -1,5 +1,6 @@
 #include "rtcmixlogview.h"
 #include "RTcmix_API.h"
+#include "utils.h"
 
 #include <QFileInfo>
 #include <QTimer>
@@ -39,7 +40,7 @@ RTcmixLogView::RTcmixLogView(QWidget *parent) : QPlainTextEdit(parent)
     RTcmix_setPrintCallback(rtcmixPrintCallback, &logRingBuffer);
 
     logTimer = new QTimer(this);
-    connect(logTimer, SIGNAL(timeout()), this, SLOT(checkLogOutput()));
+    CHECKED_CONNECT(logTimer, SIGNAL(timeout()), this, SLOT(checkLogOutput()));
 
     viewport()->setAcceptDrops(false);
 }

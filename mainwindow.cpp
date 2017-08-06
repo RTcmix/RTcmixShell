@@ -47,7 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
     scoreFinishedTimer = new QTimer(this);
-    connect(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
+    CHECKED_CONNECT(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
     setScorePlayMode(); // defaults to Exclusive, because menu action initially unchecked
 
     curEditor->setFocus();
