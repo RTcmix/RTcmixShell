@@ -76,28 +76,28 @@ void MainWindow::createFileActions()
     actionNewFile = new QAction(tr("&New"), this);
     actionNewFile->setShortcut(QKeySequence::New);
     actionNewFile->setStatusTip(tr("Create a new score"));
-    connect(actionNewFile, &QAction::triggered, this, &MainWindow::fileNew);
+    CHECKED_CONNECT(actionNewFile, &QAction::triggered, this, &MainWindow::fileNew);
 
     actionOpenFile = new QAction(tr("&Open"), this);
     actionOpenFile->setShortcut(QKeySequence::Open);
     actionOpenFile->setStatusTip(tr("Open an existing score file"));
-    connect(actionOpenFile, &QAction::triggered, this, &MainWindow::fileOpen);
+    CHECKED_CONNECT(actionOpenFile, &QAction::triggered, this, &MainWindow::fileOpen);
 
     actionSaveFile = new QAction(tr("&Save"), this);
     actionSaveFile->setShortcut(QKeySequence::Save);
     actionSaveFile->setStatusTip(tr("Save the edited score to disk"));
     actionSaveFile->setEnabled(editor->document()->isModified());
-    connect(actionSaveFile, &QAction::triggered, this, &MainWindow::fileSave);
-    connect(editor->document(), &QTextDocument::modificationChanged, actionSaveFile, &QAction::setEnabled);
+    CHECKED_CONNECT(actionSaveFile, &QAction::triggered, this, &MainWindow::fileSave);
+    CHECKED_CONNECT(editor->document(), &QTextDocument::modificationChanged, actionSaveFile, &QAction::setEnabled);
 
     actionSaveFileAs = new QAction(tr("Save &As..."), this);
     actionSaveFileAs->setShortcut(QKeySequence::SaveAs);
     actionSaveFileAs->setStatusTip(tr("Save the edited score to disk"));
-    connect(actionSaveFileAs, &QAction::triggered, this, &MainWindow::fileSaveAs);
+    CHECKED_CONNECT(actionSaveFileAs, &QAction::triggered, this, &MainWindow::fileSaveAs);
 
     actionQuit = new QAction(tr("&Quit"), this);
     actionQuit->setShortcut(Qt::CTRL + Qt::Key_Q);
-    connect(actionQuit, &QAction::triggered, this, &QWidget::close);
+    CHECKED_CONNECT(actionQuit, &QAction::triggered, this, &QWidget::close);
 }
 
 // NB: editor must exist before this is called
@@ -107,34 +107,34 @@ void MainWindow::createEditActions()
     actionUndo->setShortcut(QKeySequence::Undo);
     actionUndo->setStatusTip(tr("Undo the last operation"));
     actionUndo->setEnabled(editor->document()->isUndoAvailable());
-    connect(actionUndo, &QAction::triggered, editor, &QTextEdit::undo);
-    connect(editor->document(), &QTextDocument::undoAvailable, actionUndo, &QAction::setEnabled);
+    CHECKED_CONNECT(actionUndo, &QAction::triggered, editor, &QTextEdit::undo);
+    CHECKED_CONNECT(editor->document(), &QTextDocument::undoAvailable, actionUndo, &QAction::setEnabled);
 
     actionRedo = new QAction(tr("&Redo"), this);
     actionRedo->setShortcut(QKeySequence::Redo);
     actionRedo->setStatusTip(tr("Redo the last operation"));
     actionRedo->setEnabled(editor->document()->isRedoAvailable());
-    connect(actionRedo, &QAction::triggered, editor, &QTextEdit::redo);
-    connect(editor->document(), &QTextDocument::redoAvailable, actionRedo, &QAction::setEnabled);
+    CHECKED_CONNECT(actionRedo, &QAction::triggered, editor, &QTextEdit::redo);
+    CHECKED_CONNECT(editor->document(), &QTextDocument::redoAvailable, actionRedo, &QAction::setEnabled);
 
     actionCut = new QAction(tr("Cu&t"), this);
     actionCut->setShortcut(QKeySequence::Cut);
     actionCut->setStatusTip(tr("Cut the current selection to the clipboard"));
     actionCut->setEnabled(false);
-    connect(actionCut, &QAction::triggered, editor, &QTextEdit::cut);
+    CHECKED_CONNECT(actionCut, &QAction::triggered, editor, &QTextEdit::cut);
 
     actionCopy = new QAction(tr("&Copy"), this);
     actionCopy->setShortcut(QKeySequence::Copy);
     actionCopy->setStatusTip(tr("Copy the current selection to the clipboard"));
     actionCopy->setEnabled(false);
-    connect(actionCopy, &QAction::triggered, editor, &QTextEdit::copy);
+    CHECKED_CONNECT(actionCopy, &QAction::triggered, editor, &QTextEdit::copy);
 
     actionPaste = new QAction(tr("&Paste"), this);
     actionPaste->setShortcut(QKeySequence::Paste);
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
-    connect(actionPaste, &QAction::triggered, editor, &QTextEdit::paste);
+    CHECKED_CONNECT(actionPaste, &QAction::triggered, editor, &QTextEdit::paste);
 
-    connect(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::clipboardDataChanged);
+    CHECKED_CONNECT(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::clipboardDataChanged);
 }
 
 void MainWindow::createScoreActions()
@@ -144,14 +144,14 @@ void MainWindow::createScoreActions()
     actionPlay = new QAction(playIcon, tr("&Play"), this);
     actionPlay->setShortcut(Qt::CTRL + Qt::Key_P);
     actionPlay->setStatusTip(tr("Play the score"));
-    connect(actionPlay, &QAction::triggered, this, &MainWindow::playScore);
+    CHECKED_CONNECT(actionPlay, &QAction::triggered, this, &MainWindow::playScore);
 
     const QIcon stopIcon = QIcon::fromTheme("media-playback-stop", QIcon(rsrcPath + "/stop.png"));
  //   const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
     actionStop = new QAction(stopIcon, tr("&Stop"), this);
     actionStop->setShortcut(Qt::CTRL + Qt::Key_Period);
     actionStop->setStatusTip(tr("Stop playing the score"));
-    connect(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
+    CHECKED_CONNECT(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
 #ifdef NOTYET
     const QIcon recordIcon = QIcon::fromTheme("media-record", QIcon(rsrcPath + "/record.png"));
@@ -159,13 +159,13 @@ void MainWindow::createScoreActions()
     actionRecord->setShortcut(Qt::CTRL + Qt::Key_R);
     actionRecord->setShortcut(QKeySequence::Record);
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
-    connect(actionRecord, &QAction::triggered, this, &MainWindow::record);
+    CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
 #endif
 
     actionClearLog = new QAction(tr("&Clear"), this);
     actionClearLog->setShortcut(Qt::CTRL + Qt::Key_B);
     actionClearLog->setStatusTip(tr("Clear the score report area at the bottom of the window"));
-    connect(actionClearLog, &QAction::triggered, rtcmixLogView, &RTcmixLogView::clearLog);
+    CHECKED_CONNECT(actionClearLog, &QAction::triggered, rtcmixLogView, &RTcmixLogView::clearLog);
 }
 
 void MainWindow::createTextActions()
@@ -225,7 +225,7 @@ void MainWindow::createToolbars()
 
     comboFont = new QFontComboBox(tb);
     tb->addWidget(comboFont);
-    connect(comboFont, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textFamily);
+    CHECKED_CONNECT(comboFont, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textFamily);
 
     comboSize = new QComboBox(tb);
     comboSize->setObjectName("comboSize");
@@ -237,7 +237,7 @@ void MainWindow::createToolbars()
         comboSize->addItem(QString::number(size));
     comboSize->setCurrentIndex(standardSizes.indexOf(QApplication::font().pointSize()));
 
-    connect(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textSize);
+    CHECKED_CONNECT(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textSize);
 }
 
 void MainWindow::setDefaultFont()
@@ -260,8 +260,8 @@ void MainWindow::createEditors()
     Q_UNUSED(h);
     setCurrentFileName(QString(tr("untitled.sco")));
     setWindowModified(editor->document()->isModified());
-    connect(editor->document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
-    connect(editor, &QTextEdit::cursorPositionChanged, this, &MainWindow::cursorPositionChanged);
+    CHECKED_CONNECT(editor->document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
+    CHECKED_CONNECT(editor, &QTextEdit::cursorPositionChanged, this, &MainWindow::cursorPositionChanged);
 }
 
 void MainWindow::createVerticalSplitter()
