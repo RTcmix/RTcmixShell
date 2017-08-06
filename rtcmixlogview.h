@@ -1,7 +1,6 @@
 #ifndef RTCMIXLOGVIEW_H
 #define RTCMIXLOGVIEW_H
 
-#include <QObject>
 #include <QPlainTextEdit>
 #include "pa_ringbuffer.h"
 
