@@ -16,6 +16,7 @@ const QString rsrcPath = ":/images/mac";
 const QString rsrcPath = ":/images/win";
 #endif
 
+const int defaultTabStopChars = 4;      // FIXME: turn this into a pref
 const int logFontSize = 12;
 const int scoreFinishedTimerInterval = 100; // msec
 
@@ -266,7 +267,7 @@ void MainWindow::setDefaultFont()
     curEditor->setFont(textFont);
     rtcmixLogView->setFont(textFont);
     updateFontMenus(curEditor->font());
-    setTabStops();
+    curEditor->setTabStopChars(defaultTabStopChars);
 }
 
 // NB: plural, in anticipation of tabbed editors
@@ -293,24 +294,12 @@ void MainWindow::createVerticalSplitter()
     splitter->setCollapsible(edIndex, false);
 }
 
-// Do this after setting a new font or size.
-void MainWindow::setTabStops()
-{
-    //TODO: make this a preference
-    const int tabStop = 4;
-    QString spaces; // more accurate to measure a string of tabStop spaces, instead of one space
-    for (int i = 0; i < tabStop; i++)
-        spaces += " ";
-    QFontMetrics metrics(curEditor->font());
-    curEditor->setTabStopWidth(metrics.width(spaces));
-}
-
 void MainWindow::textFamily(const QString &f)
 {
     QFont font = curEditor->font();
     font.setFamily(f);
     curEditor->setFont(font);
-    setTabStops();
+    curEditor->setTabStopChars(defaultTabStopChars);
     updateFontMenus(curEditor->font());
     font.setPointSize(12);
     rtcmixLogView->setFont(font);
@@ -323,7 +312,7 @@ void MainWindow::textSize(const QString &p)
         QFont font = curEditor->font();
         font.setPointSize(pointSize);
         curEditor->setFont(font);
-        setTabStops();
+        curEditor->setTabStopChars(defaultTabStopChars);
         updateFontMenus(curEditor->font());
         font.setPointSize(logFontSize);
         rtcmixLogView->setFont(font);
@@ -404,21 +393,23 @@ bool MainWindow::loadFile(const QString &f)
 
 void MainWindow::fileOpen()
 {
-    QFileDialog fileDialog(this, tr("Open File"));
-    if (firstFileDialog) {
-        fileDialog.setDirectory(QDir::home());
-        firstFileDialog = false;
+    if (maybeSave()) {
+        QFileDialog fileDialog(this, tr("Open File"));
+        if (firstFileDialog) {
+            fileDialog.setDirectory(QDir::home());
+            firstFileDialog = false;
+        }
+        fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
+        fileDialog.setFileMode(QFileDialog::ExistingFile);
+        fileDialog.setNameFilters(QStringList() << "RTcmix score files (*.sco)" << "Text files (*.txt)");
+        if (fileDialog.exec() != QDialog::Accepted)
+            return;
+        const QString fn = fileDialog.selectedFiles().first();
+        if (loadFile(fn))
+            statusBar()->showMessage(tr("Opened \"%1\"").arg(QDir::toNativeSeparators(fn)));
+        else
+            statusBar()->showMessage(tr("Could not open \"%1\"").arg(QDir::toNativeSeparators(fn)));
     }
-    fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
-    fileDialog.setFileMode(QFileDialog::ExistingFile);
-    fileDialog.setNameFilters(QStringList() << "RTcmix score files (*.sco)" << "Text files (*.txt)");
-    if (fileDialog.exec() != QDialog::Accepted)
-        return;
-    const QString fn = fileDialog.selectedFiles().first();
-    if (loadFile(fn))
-        statusBar()->showMessage(tr("Opened \"%1\"").arg(QDir::toNativeSeparators(fn)));
-    else
-        statusBar()->showMessage(tr("Could not open \"%1\"").arg(QDir::toNativeSeparators(fn)));
 }
 
 bool MainWindow::maybeSave()
@@ -568,7 +559,7 @@ void MainWindow::sendScoreFragment(char *fragment)
 void MainWindow::setScorePrintLevel(int level)
 {
 Q_UNUSED(level);
-#ifdef NOTYET // FIXME: test longchain.sco first
+#ifndef NOTYET // FIXME: test longchain.sco first
     char buf[32];
     snprintf(buf, 32, "print_on(%d)\n", level);
     sendScoreFragment(buf);

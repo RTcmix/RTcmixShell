@@ -14,6 +14,7 @@ class Editor : public QTextEdit
 
 public:
     Editor(QWidget *parent = 0);
+    void setTabStopChars(int tabStopChars);
 
 public slots:
 
