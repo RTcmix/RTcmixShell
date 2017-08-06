@@ -20,13 +20,14 @@ const int scoreFinishedTimerInterval = 100; // msec
 void rtcmixFinishedCallback(long long frameCount, void *inContext);
 
 
-MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
+MainWindow::MainWindow(QWidget *parent)
+    : QMainWindow(parent)
+    , firstFileDialog(true)
 {
 #ifdef Q_OS_OSX
     setUnifiedTitleAndToolBarOnMac(true);
 #endif
     setWindowTitle(QCoreApplication::applicationName());
-    firstFileDlog = true;
 
     audio = new Audio;
 
@@ -45,21 +46,9 @@ MainWindow::MainWindow(QWidget *parent) : QMainWindow(parent)
     RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
     scoreFinishedTimer = new QTimer(this);
     connect(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
+    setScorePlayMode(); // defaults to Exclusive, because menu action initially unchecked
 
     editor->setFocus();
-}
-
-void rtcmixFinishedCallback(long long frameCount, void *inContext)
-{
-    (void) frameCount;
-    MainWindow *thisclass = reinterpret_cast<MainWindow *>(inContext);
-    thisclass->scoreFinished = true;
-}
-
-void MainWindow::checkScoreFinished()
-{
-    if (scoreFinished)
-        stopScore();
 }
 
 void MainWindow::createActions()
@@ -158,6 +147,11 @@ void MainWindow::createScoreActions()
     CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
 #endif
 
+    actionAllowOverlappingScores = new QAction(tr("Allow Overlapping Scores"), this);
+    actionAllowOverlappingScores->setStatusTip(tr("Permit one score to be played while another one is playing"));
+    actionAllowOverlappingScores->setCheckable(true);
+    CHECKED_CONNECT(actionAllowOverlappingScores, &QAction::triggered, this, &MainWindow::setScorePlayMode);
+
     actionClearLog = new QAction(tr("&Clear"), this);
     actionClearLog->setShortcut(Qt::CTRL + Qt::Key_B);
     actionClearLog->setStatusTip(tr("Clear the score report area at the bottom of the window"));
@@ -194,6 +188,7 @@ void MainWindow::createMenus()
     scoreMenu->addAction(actionRecord);
 #endif
     scoreMenu->addSeparator();
+    scoreMenu->addAction(actionAllowOverlappingScores);
     scoreMenu->addAction(actionClearLog);
 
     QMenu *helpMenu = menuBar()->addMenu(tr("Help"));
@@ -366,6 +361,10 @@ void MainWindow::closeEvent(QCloseEvent *e)
         e->ignore();
 }
 
+
+// =====================================================================
+// File menu functions
+
 void MainWindow::setCurrentFileName(const QString &fileName)
 {
     this->fileName = fileName;
@@ -410,9 +409,9 @@ bool MainWindow::loadFile(const QString &f)
 void MainWindow::fileOpen()
 {
     QFileDialog fileDialog(this, tr("Open File"));
-    if (firstFileDlog) {
+    if (firstFileDialog) {
         fileDialog.setDirectory(QDir::home());
-        firstFileDlog = false;
+        firstFileDialog = false;
     }
     fileDialog.setAcceptMode(QFileDialog::AcceptOpen);
     fileDialog.setFileMode(QFileDialog::ExistingFile);
@@ -467,9 +466,9 @@ bool MainWindow::fileSave()
 bool MainWindow::fileSaveAs()
 {
     QFileDialog fileDialog(this, tr("Save"));
-    if (firstFileDlog) {
+    if (firstFileDialog) {
         fileDialog.setDirectory(QDir::home());
-        firstFileDlog = false;
+        firstFileDialog = false;
     }
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
     fileDialog.setNameFilter("RTcmix score files (*.sco)");
@@ -479,6 +478,66 @@ bool MainWindow::fileSaveAs()
     const QString fn = fileDialog.selectedFiles().first();
     setCurrentFileName(fn);
     return fileSave();
+}
+
+
+// =====================================================================
+// Score menu functions
+
+void rtcmixFinishedCallback(long long frameCount, void *inContext)
+{
+    (void) frameCount;
+    MainWindow *thisclass = reinterpret_cast<MainWindow *>(inContext);
+    thisclass->scoreFinished = true;
+}
+
+void MainWindow::checkScoreFinished()
+{
+    if (scoreFinished && (scorePlayMode == Exclusive))
+        stopScore();
+}
+
+void MainWindow::setScorePlayMode()
+{
+    if (actionAllowOverlappingScores->isChecked()) {
+        scorePlayMode = Overlapping;
+        // we do not disable the score-finished callback, in case
+        // other useful information gets there in the future
+    }
+    else {
+        scorePlayMode = Exclusive;
+        // not sure we should stop score playing here; this setting
+        // should affect future plays
+//        stopScore();
+    }
+}
+
+void MainWindow::xableScoreActions(bool starting)
+{
+    if (scorePlayMode == Exclusive) {
+        if (starting) {
+            actionPlay->setEnabled(false);
+            playButton->setEnabled(false);
+            actionStop->setEnabled(true);
+            stopButton->setEnabled(true);
+        }
+        else {
+            actionStop->setEnabled(false);
+            stopButton->setEnabled(false);
+            actionPlay->setEnabled(true);
+            playButton->setEnabled(true);
+        }
+    }
+    else {  // Overlapping
+        if (starting) {
+            actionStop->setEnabled(true);
+            stopButton->setEnabled(true);
+        }
+        else {
+            actionStop->setEnabled(false);
+            stopButton->setEnabled(false);
+        }
+    }
 }
 
 void MainWindow::playScore()
@@ -493,17 +552,14 @@ void MainWindow::playScore()
         rtcmixLogView->startLog();
         setScorePrintLevel(5);
         rtcmixLogView->printLogSeparator(this->fileName);
-        actionPlay->setEnabled(false);
-        playButton->setEnabled(false);
-        actionStop->setEnabled(true);
-        stopButton->setEnabled(true);
+        xableScoreActions(true);
         scoreFinished = false;
         if (!scoreFinishedTimer->isActive())
             scoreFinishedTimer->start(scoreFinishedTimerInterval);
         int result = RTcmix_parseScore(buf, len);
         Q_UNUSED(result);
     }
-qDebug("invoked playScore(), buf len: %d, buffer...", len);
+//qDebug("invoked playScore(), buf len: %d, buffer...", len);
 //qDebug("%s", buf);
 }
 
@@ -515,6 +571,7 @@ void MainWindow::sendScoreFragment(char *fragment)
 
 void MainWindow::setScorePrintLevel(int level)
 {
+Q_UNUSED(level);
 #ifdef NOTYET // FIXME: test longchain.sco first
     char buf[32];
     snprintf(buf, 32, "print_on(%d)\n", level);
@@ -524,9 +581,8 @@ void MainWindow::setScorePrintLevel(int level)
 
 void MainWindow::stopScore()
 {
+    xableScoreActions(false);
     scoreFinishedTimer->stop();
-    actionStop->setEnabled(false);
-    stopButton->setEnabled(false);
     rtcmixLogView->stopLog();
     setScorePrintLevel(0);
 //#define FLUSH_SCORE_ON_STOP
@@ -535,6 +591,4 @@ void MainWindow::stopScore()
 #else
     audio->reInitializeRTcmix();
 #endif
-    actionPlay->setEnabled(true);
-    playButton->setEnabled(true);
 }

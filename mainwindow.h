@@ -43,6 +43,7 @@ private slots:
     void clipboardDataChanged();
     void cursorPositionChanged();
     void checkScoreFinished();
+    void setScorePlayMode();
 
 private:
     void createActions();
@@ -59,6 +60,7 @@ private:
     bool maybeSave();
     void updateFontMenus(const QFont &f);
     void setTabStops();
+    void xableScoreActions(bool);
     void setScorePrintLevel(int);
     void sendScoreFragment(char *);
 
@@ -80,6 +82,7 @@ private:
     QAction *actionPlay;
     QAction *actionStop;
     QAction *actionRecord;
+    QAction *actionAllowOverlappingScores;
     QAction *actionClearLog;
     QMenu *fileMenu;
     QMenu *editMenu;
@@ -91,7 +94,12 @@ private:
     QComboBox *comboSize;
     QTimer *scoreFinishedTimer;
 
-    bool firstFileDlog;
+    enum ScorePlayMode {
+        Exclusive = 0,   // playing a new score not permitted until prev one stops
+        Overlapping = 1
+    };
+    ScorePlayMode scorePlayMode;
+    bool firstFileDialog;
 };
 
 // NB: This comes from the Spectrum Qt example.

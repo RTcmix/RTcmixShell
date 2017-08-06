@@ -18,7 +18,7 @@ void rtcmixPrintCallback(const char *printBuffer, void *inContext);
 // NB: WAVETABLE4.sco blows past 4096 strings
 // NB: MULTI_FM2.sco can have strings as long as 272 chars!
 const int ringBufferNumStrings = 8192;      // must be power of 2
-const int ringBufferStringCapacity = 128;   // ditto
+const int ringBufferStringCapacity = 256;   // ditto
 const int logTimerInterval = 10;      // msec
 const int logMaxLines = 8192;
 
