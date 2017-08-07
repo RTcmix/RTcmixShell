@@ -586,7 +586,7 @@ bool MainWindow::chooseRecordFilename(QString &fileName)
         firstFileDialog = false;
     }
     fileDialog.setAcceptMode(QFileDialog::AcceptSave);
-    fileDialog.setNameFilter("Sound files (*.aif, *.aiff, *.wav)");
+    fileDialog.setNameFilters(QStringList() << "WAVE file (*.wav)" << "AIFF file (*.aiff, *.aif)");
     fileDialog.setDefaultSuffix("wav");
     if (fileDialog.exec() != QDialog::Accepted)
         return false;
@@ -603,4 +603,5 @@ void MainWindow::record()
     if (!playing)
         playScore();
     audio->startRecording(fileName);    // FIXME: once this runs on its own thread, put it before playScore
+    qDebug("returned from startRecording");
 }

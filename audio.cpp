@@ -271,15 +271,31 @@ int Audio::reInitializeRTcmix()
 
 void Audio::startRecording(const QString &fileName)
 {
-    Q_UNUSED(fileName);
+    QByteArray ba = fileName.toLatin1();
+    char *fname = ba.data();
+    SF_INFO sfinfo;
+    memset(&sfinfo, 0, sizeof(sfinfo));
+    sfinfo.samplerate = requestedSamplingRate;
+    sfinfo.channels = requestedNumOutChannels;
+    sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE;
+    if (!sf_format_check(&sfinfo)) {
+        qDebug("startRecording: invalid sound file format requested");
+        return;
+    }
+    SNDFILE *sf = sf_open(fname, SFM_WRITE, &sfinfo);
+    if (sf == NULL) {
+        qDebug("startRecording: sf_open returned NULL (%s)", sf_strerror(sf));
+        return;
+    }
 
     PaUtil_FlushRingBuffer(&recordRingBuffer);
     recording = true;
 
     // FIXME: for now, test this using the main thread for a definite duration.
     // This will block the GUI thread, among other nasty things.
-    int numFrames = 44100 * 10;
-
+    int numFrames = 44100 * 6;
+int totframes = numFrames;
+int totread = 0;
     while (numFrames) {
         int sampsAvail = PaUtil_GetRingBufferReadAvailable(&recordRingBuffer);
         int readCount = sampsAvail - (sampsAvail % requestedNumOutChannels); // align on frame boundary
@@ -288,8 +304,17 @@ void Audio::startRecording(const QString &fileName)
             if (sampsRead != readCount)
                 qDebug("record ringbuf read request doesn't match samps delivered");
             numFrames -= (sampsRead / requestedNumOutChannels);
+            sf_count_t sampsWritten = sf_write_float(sf, transferBuffer, sampsRead);
+            if (sampsWritten != sampsRead)
+                qDebug().nospace() << "startRecording: sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
+totread += sampsRead;
         }
+        //sf_write_sync(sf);
     }
+    if (sf_close(sf) != 0)
+        qDebug("startRecording: sf_close error: %s", sf_strerror(sf));
+qDebug("finished recording - numFrames=%d, readCount=%d", totframes, totread);
+    stopRecording();
 }
 
 void Audio::stopRecording()
