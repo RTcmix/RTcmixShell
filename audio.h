@@ -49,6 +49,7 @@
 
 #include <QByteArray>
 #include <QComboBox>
+#include <QFile>
 #include <QLabel>
 #include <QMainWindow>
 #include <QObject>
@@ -56,14 +57,16 @@
 #include <QSlider>
 
 #include "portaudio.h"
+#include "pa_ringbuffer.h"
 
 class Audio
 {
-
 public:
     Audio();
     ~Audio();
     int reInitializeRTcmix();
+    void startRecording(const QString &);
+    void stopRecording();
 
 private:
     int initializeAudio();
@@ -103,6 +106,11 @@ private:
     int requestedNumOutChannels;
     int requestedBlockSize;
     int busCount;
+
+    PaUtilRingBuffer recordRingBuffer;
+    float *recordBuffer;
+    float *transferBuffer;
+    bool recording;
 
 #ifdef NOTYET   // should move to main window
     // Owned by layout

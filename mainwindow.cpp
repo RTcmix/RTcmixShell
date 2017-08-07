@@ -25,6 +25,7 @@ void rtcmixFinishedCallback(long long frameCount, void *inContext);
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
+    , playing(false)
     , firstFileDialog(true)
 {
 #ifdef Q_OS_OSX
@@ -142,13 +143,11 @@ void MainWindow::createScoreActions()
     actionStop->setEnabled(false);
     CHECKED_CONNECT(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
-#ifdef NOTYET
     const QIcon recordIcon = QIcon::fromTheme("media-record", QIcon(rsrcPath + "/record.png"));
     actionRecord = new QAction(recordIcon, tr("&Record"), this);
     actionRecord->setShortcut(Qt::CTRL + Qt::Key_R);
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
     CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
-#endif
 
     actionAllowOverlappingScores = new QAction(tr("Allow Overlapping Scores"), this);
     actionAllowOverlappingScores->setStatusTip(tr("Permit one score to be played while another one is playing"));
@@ -187,9 +186,7 @@ void MainWindow::createMenus()
     scoreMenu = menuBar()->addMenu(tr("&Score"));
     scoreMenu->addAction(actionPlay);
     scoreMenu->addAction(actionStop);
-#ifdef NOTYET
     scoreMenu->addAction(actionRecord);
-#endif
     scoreMenu->addSeparator();
     scoreMenu->addAction(actionAllowOverlappingScores);
     scoreMenu->addAction(actionClearLog);
@@ -224,7 +221,6 @@ void MainWindow::createToolbars()
     tb->addWidget(stopButton);
     CHECKED_CONNECT(stopButton, SIGNAL(clicked()), this, SLOT(stopScore()));
 
-#ifdef NOTYET
     recordButton = new QPushButton("Record", this);
     const QIcon recordIcon = QIcon(rsrcPath + "/record.png");
     recordButton->setIcon(recordIcon);
@@ -233,7 +229,6 @@ void MainWindow::createToolbars()
     recordButton->setMinimumSize(buttonSize);
     tb->addWidget(recordButton);
     CHECKED_CONNECT(recordButton, SIGNAL(clicked()), this, SLOT(record()));
-#endif
 
     // font family/size popups -------------------------------------
 
@@ -543,6 +538,7 @@ void MainWindow::playScore()
         scoreFinished = false;
         if (!scoreFinishedTimer->isActive())
             scoreFinishedTimer->start(scoreFinishedTimerInterval);
+        playing = true;
         int result = RTcmix_parseScore(buf, len);
         Q_UNUSED(result);
     }
@@ -568,8 +564,10 @@ Q_UNUSED(level);
 
 void MainWindow::stopScore()
 {
+    audio->stopRecording();
     xableScoreActions(false);
     scoreFinishedTimer->stop();
+    playing = false;
     rtcmixLogView->stopLog();
     setScorePrintLevel(0);
 //#define FLUSH_SCORE_ON_STOP
@@ -578,4 +576,31 @@ void MainWindow::stopScore()
 #else
     audio->reInitializeRTcmix();
 #endif
+}
+
+bool MainWindow::chooseRecordFilename(QString &fileName)
+{
+    QFileDialog fileDialog(this, tr("Record"));
+    if (firstFileDialog) {
+        fileDialog.setDirectory(QDir::home());
+        firstFileDialog = false;
+    }
+    fileDialog.setAcceptMode(QFileDialog::AcceptSave);
+    fileDialog.setNameFilter("Sound files (*.aif, *.aiff, *.wav)");
+    fileDialog.setDefaultSuffix("wav");
+    if (fileDialog.exec() != QDialog::Accepted)
+        return false;
+    fileName = fileDialog.selectedFiles().first();
+    return true;
+}
+
+void MainWindow::record()
+{
+    QString fileName;
+    if (!chooseRecordFilename(fileName))
+        return;
+    qDebug() << "recording into file:" << fileName;
+    if (!playing)
+        playScore();
+    audio->startRecording(fileName);    // FIXME: once this runs on its own thread, put it before playScore
 }

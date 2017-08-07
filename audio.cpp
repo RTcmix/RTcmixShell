@@ -46,6 +46,7 @@
 #include "audio.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
+#include "sndfile.h"
 #include "utils.h"
 
 const float DefaultSamplingRate = 44100.0;
@@ -53,6 +54,9 @@ const int DefaultNumInChannels = 0;
 const int DefaultNumOutChannels = 2;
 const int DefaultBlockSize = 512;
 const int DefaultBusCount = 32;
+
+// FIXME: Might want to realloc this if numchans changes
+const int ringBufferNumSamps = 1024 * 32;
 
 Audio::Audio()
     : portAudioInitialized(false)
@@ -65,6 +69,7 @@ Audio::Audio()
     , requestedNumOutChannels(DefaultNumOutChannels)
     , requestedBlockSize(DefaultBlockSize)
     , busCount(DefaultBusCount)
+    , recording(false)
 {
     int result = initializeAudio();
     if (result == 0) {
@@ -72,6 +77,10 @@ Audio::Audio()
         if (result == 0)
             startAudio();
     }
+
+    recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
+    PaUtil_InitializeRingBuffer(&recordRingBuffer, ringBufferNumSamps, sizeof(float), recordBuffer);
+    transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 }
 
 Audio::~Audio()
@@ -181,6 +190,19 @@ int Audio::memberCallback(
             qDebug("Five OUTPUT UNDERFLOWs");
     }
 #endif
+
+    if (recording) {
+        float *ptr = (float *) output;
+        int inSampCount = int(frameCount * requestedNumOutChannels);
+        while (inSampCount) {
+            int sampsAvail = PaUtil_GetRingBufferWriteAvailable(&recordRingBuffer);
+            int writeCount = qMin(inSampCount, sampsAvail);
+            int sampsWritten = PaUtil_WriteRingBuffer(&recordRingBuffer, ptr, writeCount);
+            inSampCount -= sampsWritten;
+            ptr += sampsWritten;
+        }
+    }
+
     int result = RTcmix_runAudio(NULL /*input*/, output, frameCount);
     (void) result;
 #ifdef DEBUG_IN_CALLBACK
@@ -247,8 +269,40 @@ int Audio::reInitializeRTcmix()
     return 0;
 }
 
+void Audio::startRecording(const QString &fileName)
+{
+    Q_UNUSED(fileName);
+
+    PaUtil_FlushRingBuffer(&recordRingBuffer);
+    recording = true;
+
+    // FIXME: for now, test this using the main thread for a definite duration.
+    // This will block the GUI thread, among other nasty things.
+    int numFrames = 44100 * 10;
+
+    while (numFrames) {
+        int sampsAvail = PaUtil_GetRingBufferReadAvailable(&recordRingBuffer);
+        int readCount = sampsAvail - (sampsAvail % requestedNumOutChannels); // align on frame boundary
+        if (readCount) {
+            int sampsRead = PaUtil_ReadRingBuffer(&recordRingBuffer, transferBuffer, readCount);
+            if (sampsRead != readCount)
+                qDebug("record ringbuf read request doesn't match samps delivered");
+            numFrames -= (sampsRead / requestedNumOutChannels);
+        }
+    }
+}
+
+void Audio::stopRecording()
+{
+    if (!recording)
+        return;
+    recording = false;
+}
 
 
+
+
+// ---------------------------- NOTHING ENABLED BELOW ---------------------------
 
 #ifdef NOTYET // should be owned by app and exchange device, etc. info with Audio class
 void Audio::initializeWindow()

@@ -12,6 +12,7 @@ HEADERS         = audio.h \
                   portaudio.h \
                   RTcmix_API.h \
                   rtcmixlogview.h \
+                  sndfile.h \
                   utils.h
 
 SOURCES         = audio.cpp \
@@ -33,15 +34,18 @@ build_all:!build_pass {
 target.path = build
 INSTALLS += target
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/rtcmix/release/ -lrtcmix_embedded
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/rtcmix/debug/ -lrtcmix_embedded
-else:macx: LIBS += -L$$PWD/rtcmix/ -lrtcmix_embedded
+DEPENDPATH += $$PWD/lib/
+INCLUDEPATH += $$PWD/
 
-DEPENDPATH += $$PWD/rtcmix
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lrtcmix_embedded
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lrtcmix_embedded
+else:macx: LIBS += -L$$PWD/lib/ -lrtcmix_embedded
 
-win32:CONFIG(release, debug|release): LIBS += -L/usr/local/lib/release/ -lportaudio
-else:win32:CONFIG(debug, debug|release): LIBS += -L/usr/local/lib/debug/ -lportaudio
-else:unix: LIBS += -L/usr/local/lib/ -lportaudio
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lportaudio
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lportaudio
+else:unix: LIBS += -L$$PWD/lib/ -lportaudio
 
-INCLUDEPATH += /usr/local/include
-DEPENDPATH += /usr/local/include
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lsndfile
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lsndfile
+else:unix: LIBS += -L$$PWD/lib/ -lsndfile
+

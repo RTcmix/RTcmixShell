@@ -26,7 +26,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     void fileNew();
-    bool loadFile(const QString &f);
+    bool loadFile(const QString &);
     bool scoreFinished;
 
 protected:
@@ -39,8 +39,9 @@ private slots:
     bool fileSaveAs();
     void playScore();
     void stopScore();
-    void textFamily(const QString &f);
-    void textSize(const QString &p);
+    void record();
+    void textFamily(const QString &);
+    void textSize(const QString &);
     void clipboardDataChanged();
     void checkScoreFinished();
     void setScorePlayMode();
@@ -56,13 +57,14 @@ private:
     void setDefaultFont();
     void createEditors();
     void createVerticalSplitter();
-    void setCurrentFileName(const QString &fileName);
+    void setCurrentFileName(const QString &);
     bool maybeSave();
-    void updateFontMenus(const QFont &f);
+    void updateFontMenus(const QFont &);
     void setTabStops();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
     void sendScoreFragment(char *);
+    bool chooseRecordFilename(QString &);
 
     Audio *audio;
     Editor *curEditor;
@@ -99,6 +101,7 @@ private:
         Overlapping = 1
     };
     ScorePlayMode scorePlayMode;
+    bool playing;
     bool firstFileDialog;
 };
 
