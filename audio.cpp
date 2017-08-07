@@ -79,7 +79,7 @@ Audio::Audio()
     }
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
-    PaUtil_InitializeRingBuffer(&recordRingBuffer, ringBufferNumSamps, sizeof(float), recordBuffer);
+    PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
     transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 }
 
@@ -192,15 +192,27 @@ int Audio::memberCallback(
 #endif
 
     if (recording) {
+        int failCount = 0;
         float *ptr = (float *) output;
         int inSampCount = int(frameCount * requestedNumOutChannels);
         while (inSampCount) {
             int sampsAvail = PaUtil_GetRingBufferWriteAvailable(&recordRingBuffer);
             int writeCount = qMin(inSampCount, sampsAvail);
-            int sampsWritten = PaUtil_WriteRingBuffer(&recordRingBuffer, ptr, writeCount);
-            inSampCount -= sampsWritten;
-            ptr += sampsWritten;
+            if (writeCount > 0) {
+                int sampsWritten = PaUtil_WriteRingBuffer(&recordRingBuffer, ptr, writeCount);
+                inSampCount -= sampsWritten;
+//qDebug("audio callback: sampsAvail=%d, sampsWritten=%d", sampsAvail, sampsWritten);
+                ptr += sampsWritten;
+            }
+            else
+                failCount++;
+            if (failCount > 0) {
+qDebug("audio callback: ring buffer write not available (1 time)");
+                failCount = 0;
+//                break;
+            }
         }
+//qDebug("audio callback: loop done (inSampCount=%d)", inSampCount);
     }
 
     int result = RTcmix_runAudio(NULL /*input*/, output, frameCount);
@@ -273,8 +285,9 @@ void Audio::startRecording(const QString &fileName)
 {
     QByteArray ba = fileName.toLatin1();
     char *fname = ba.data();
+
     SF_INFO sfinfo;
-    memset(&sfinfo, 0, sizeof(sfinfo));
+    bzero(&sfinfo, sizeof(sfinfo));
     sfinfo.samplerate = requestedSamplingRate;
     sfinfo.channels = requestedNumOutChannels;
     sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE;
@@ -282,38 +295,48 @@ void Audio::startRecording(const QString &fileName)
         qDebug("startRecording: invalid sound file format requested");
         return;
     }
+
     SNDFILE *sf = sf_open(fname, SFM_WRITE, &sfinfo);
     if (sf == NULL) {
         qDebug("startRecording: sf_open returned NULL (%s)", sf_strerror(sf));
         return;
     }
 
+    if (recording) {
+        sf_close(sf);
+        qDebug("startRecording called while already recording!");
+        return;
+    }
     PaUtil_FlushRingBuffer(&recordRingBuffer);
     recording = true;
 
+//******* here's where we should start working in another thread
+
     // FIXME: for now, test this using the main thread for a definite duration.
-    // This will block the GUI thread, among other nasty things.
+    // This will block the GUI thread.
     int numFrames = 44100 * 6;
 int totframes = numFrames;
-int totread = 0;
-    while (numFrames) {
+int totsampswritten = 0;
+    // NB: This will write a total number of frames that is evenly divisible by the audio block size
+    while (numFrames > 0) {
         int sampsAvail = PaUtil_GetRingBufferReadAvailable(&recordRingBuffer);
-        int readCount = sampsAvail - (sampsAvail % requestedNumOutChannels); // align on frame boundary
-        if (readCount) {
-            int sampsRead = PaUtil_ReadRingBuffer(&recordRingBuffer, transferBuffer, readCount);
-            if (sampsRead != readCount)
+//        int readCount = sampsAvail - (sampsAvail % requestedNumOutChannels); // align on frame boundary
+        if (sampsAvail) {
+            int sampsRead = PaUtil_ReadRingBuffer(&recordRingBuffer, transferBuffer, sampsAvail);
+            if (sampsRead != sampsAvail)
                 qDebug("record ringbuf read request doesn't match samps delivered");
             numFrames -= (sampsRead / requestedNumOutChannels);
+//qDebug("startRecord: sampsRead=%d => numFrames remaining=%d", sampsRead, numFrames);
             sf_count_t sampsWritten = sf_write_float(sf, transferBuffer, sampsRead);
             if (sampsWritten != sampsRead)
                 qDebug().nospace() << "startRecording: sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
-totread += sampsRead;
+totsampswritten += sampsRead;
         }
-        //sf_write_sync(sf);
+        //sf_write_sync(sf);  messes up playback. call less frequently, or not at all?
     }
     if (sf_close(sf) != 0)
         qDebug("startRecording: sf_close error: %s", sf_strerror(sf));
-qDebug("finished recording - numFrames=%d, readCount=%d", totframes, totread);
+qDebug("finished recording - frames requested: %d, frames written: %d", totframes, totsampswritten / 2);
     stopRecording();
 }
 

@@ -110,7 +110,7 @@ private:
     PaUtilRingBuffer recordRingBuffer;
     float *recordBuffer;
     float *transferBuffer;
-    bool recording;
+    std::atomic<bool> recording;
 
 #ifdef NOTYET   // should move to main window
     // Owned by layout
