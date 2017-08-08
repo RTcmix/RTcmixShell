@@ -40,7 +40,7 @@ RTcmixLogView::RTcmixLogView(QWidget *parent) : QPlainTextEdit(parent)
     RTcmix_setPrintCallback(rtcmixPrintCallback, &logRingBuffer);
 
     logTimer = new QTimer(this);
-    CHECKED_CONNECT(logTimer, SIGNAL(timeout()), this, SLOT(checkLogOutput()));
+    CHECKED_CONNECT(logTimer, &QTimer::timeout, this, &RTcmixLogView::checkLogOutput);
 
     viewport()->setAcceptDrops(false);
 }

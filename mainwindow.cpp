@@ -50,7 +50,7 @@ MainWindow::MainWindow(QWidget *parent)
 
     RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
     scoreFinishedTimer = new QTimer(this);
-    CHECKED_CONNECT(scoreFinishedTimer, SIGNAL(timeout()), this, SLOT(checkScoreFinished()));
+    CHECKED_CONNECT(scoreFinishedTimer, &QTimer::timeout, this, &MainWindow::checkScoreFinished);
     setScorePlayMode(); // defaults to Exclusive, because menu action initially unchecked
 
     curEditor->setFocus();
@@ -214,7 +214,7 @@ void MainWindow::createToolbars()
     playButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     playButton->setMinimumSize(buttonSize);
     tb->addWidget(playButton);
-    CHECKED_CONNECT(playButton, SIGNAL(clicked()), this, SLOT(playScore()));
+    CHECKED_CONNECT(playButton, &QPushButton::clicked, this, &MainWindow::playScore);
 
     stopButton = new QPushButton("Stop", this);
     const QIcon stopIcon = style()->standardIcon(QStyle::SP_MediaStop);
@@ -223,7 +223,7 @@ void MainWindow::createToolbars()
     stopButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     stopButton->setMinimumSize(buttonSize);
     tb->addWidget(stopButton);
-    CHECKED_CONNECT(stopButton, SIGNAL(clicked()), this, SLOT(stopScore()));
+    CHECKED_CONNECT(stopButton, &QPushButton::clicked, this, &MainWindow::stopScore);
 
     recordButton = new QPushButton("Record", this);
     const QIcon recordIcon = QIcon(rsrcPath + "/record.png");
@@ -232,7 +232,7 @@ void MainWindow::createToolbars()
     recordButton->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
     recordButton->setMinimumSize(buttonSize);
     tb->addWidget(recordButton);
-    CHECKED_CONNECT(recordButton, SIGNAL(clicked()), this, SLOT(record()));
+    CHECKED_CONNECT(recordButton, &QPushButton::clicked, this, &MainWindow::record);
 
     // font family/size popups -------------------------------------
 
