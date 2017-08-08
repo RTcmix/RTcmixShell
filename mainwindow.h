@@ -65,6 +65,7 @@ private:
     void setScorePrintLevel(int);
     void sendScoreFragment(char *);
     bool chooseRecordFilename(QString &);
+    void debug();
 
     Audio *audio;
     Editor *curEditor;

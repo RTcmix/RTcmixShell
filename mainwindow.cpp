@@ -115,12 +115,15 @@ void MainWindow::createEditActions()
     actionCut->setShortcut(QKeySequence::Cut);
     actionCut->setStatusTip(tr("Cut the current selection to the clipboard"));
     actionCut->setEnabled(false);
+    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, actionCut, &QAction::setEnabled);
+//    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, this, &MainWindow::debug);
     CHECKED_CONNECT(actionCut, &QAction::triggered, curEditor, &QTextEdit::cut);
 
     actionCopy = new QAction(tr("&Copy"), this);
     actionCopy->setShortcut(QKeySequence::Copy);
     actionCopy->setStatusTip(tr("Copy the current selection to the clipboard"));
     actionCopy->setEnabled(false);
+    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, actionCopy, &QAction::setEnabled);
     CHECKED_CONNECT(actionCopy, &QAction::triggered, curEditor, &QTextEdit::copy);
 
     actionPaste = new QAction(tr("&Paste"), this);
@@ -194,7 +197,7 @@ void MainWindow::createMenus()
 
     QMenu *helpMenu = menuBar()->addMenu(tr("Help"));
     helpMenu->addAction(tr("About"), this, &MainWindow::about);
-    helpMenu->addAction(tr("About &Qt"), qApp, &QApplication::aboutQt);
+//    helpMenu->addAction(tr("About &Qt"), qApp, &QApplication::aboutQt);
 }
 
 void MainWindow::createToolbars()
@@ -615,5 +618,10 @@ void MainWindow::record()
         recordButton->setEnabled(false);
     }
     qDebug("returned from startRecording");
+}
+
+void MainWindow::debug()
+{
+    qDebug("MainWindow::debug");
 }
 
