@@ -38,15 +38,23 @@
 **
 ****************************************************************************/
 
+#include <QByteArray>
+#include <QComboBox>
 #include <QDebug>
+#include <QFile>
+#include <QLabel>
+#include <QPushButton>
+#include <QSlider>
+#include <QThread>
 #include <QVBoxLayout>
 #include <qmath.h>
 #include <qendian.h>
 
+#include <math.h>
+
 #include "audio.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
-#include "sndfile.h"
 #include "utils.h"
 
 const float DefaultSamplingRate = 44100.0;
@@ -58,18 +66,72 @@ const int DefaultBusCount = 32;
 // FIXME: Might want to realloc this if numchans changes
 const int ringBufferNumSamps = 1024 * 32;
 
+RecordWorker::RecordWorker(int numOutChans, PaUtilRingBuffer *ringBuffer, SNDFILE *outFile, QObject *parentIN)
+        : numOutChans(numOutChans)
+        , ringBuffer(ringBuffer)
+        , outFile(outFile)
+        , transferBuffer(NULL)
+        , parent(parentIN)
+{
+    transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
+
+//    CHECKED_CONNECT(this, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
+    CHECKED_CONNECT(&thread, SIGNAL(started()), this, SLOT(record()));
+
+    CHECKED_CONNECT(this, SIGNAL(finished()), &thread, SLOT(quit()));
+//    CHECKED_CONNECT(this, SIGNAL(finished()), this, SLOT(deleteLater()));
+//    CHECKED_CONNECT(&thread, SIGNAL(finished()), &thread, SLOT(deleteLater()));
+}
+
+RecordWorker::~RecordWorker()
+{
+    if (transferBuffer)
+        free(transferBuffer);
+}
+
+void RecordWorker::record()
+{
+qDebug("entering RecordWorker::record()");
+int totsampswritten = 0;
+    // NB: This will write a total number of frames that is evenly divisible by the audio block size
+    while (1) {
+        int sampsAvail = PaUtil_GetRingBufferReadAvailable(ringBuffer);
+        if (sampsAvail) {
+            int sampsRead = PaUtil_ReadRingBuffer(ringBuffer, transferBuffer, sampsAvail);
+            if (sampsRead != sampsAvail)
+                qDebug("RecordWorker::record(): ringbuf read request doesn't match samps delivered");
+//qDebug("RecordWorker::record(): sampsRead=%d", sampsRead);
+            sf_count_t sampsWritten = sf_write_float(outFile, transferBuffer, sampsRead);
+            if (sampsWritten != sampsRead)
+                qDebug().nospace() << "RecordWorker::record(): sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
+totsampswritten += sampsRead;
+        }
+        if (/*WHAT?*/0) // pretty much have to poll a var in main thread, using mutex
+            break;
+        //sf_write_sync(outFile);  messes up playback. call less frequently, or not at all?
+    }
+    if (sf_close(outFile) != 0)
+        qDebug("RecordWorker::record(): sf_close error: %s", sf_strerror(outFile));
+qDebug("finished recording - frames written: %d", totsampswritten / 2);
+
+    emit finished();
+}
+
 Audio::Audio()
     : portAudioInitialized(false)
     , rtcmixInitialized(false)
     , stream(NULL)
-    , requestedInputDeviceID(0)
-    , requestedOutputDeviceID(0)
-    , requestedSamplingRate(DefaultSamplingRate)
-    , requestedNumInChannels(DefaultNumInChannels)
-    , requestedNumOutChannels(DefaultNumOutChannels)
-    , requestedBlockSize(DefaultBlockSize)
+    , inputDeviceID(0)
+    , outputDeviceID(0)
+    , samplingRate(DefaultSamplingRate)
+    , numInChannels(DefaultNumInChannels)
+    , numOutChannels(DefaultNumOutChannels)
+    , blockSize(DefaultBlockSize)
     , busCount(DefaultBusCount)
-    , recording(false)
+    , recordFile(NULL)
+    , recordBuffer(NULL)
+    , recordWorker(NULL)
+    , nowRecording(false)
 {
     int result = initializeAudio();
     if (result == 0) {
@@ -77,10 +139,6 @@ Audio::Audio()
         if (result == 0)
             startAudio();
     }
-
-    recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
-    PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
-    transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 }
 
 Audio::~Audio()
@@ -97,6 +155,9 @@ Audio::~Audio()
     }
     if (rtcmixInitialized)
         RTcmix_destroy();
+    if (recordBuffer)
+        free(recordBuffer);
+    delete recordWorker;
 }
 
 int Audio::initializeAudio()
@@ -112,25 +173,25 @@ int Audio::initializeAudio()
 #ifdef NOTYET // determine whether what we want is available; should be in loop?
     PaStreamParameters inputParameters, outputParameters;
     bzero(&inputParameters, sizeof(inputParameters));
-    inputParameters.channelCount = requestedNumInChannels;
-    inputParameters.device = requestedInputDeviceID;
+    inputParameters.channelCount = numInChannels;
+    inputParameters.device = inputDeviceID;
     inputParameters.sampleFormat = paFloat32;
     bzero(&outputParameters, sizeof(outputParameters));
-    outputParameters.channelCount = requestedNumOutChannels;
-    outputParameters.device = requestedOutputDeviceID;
+    outputParameters.channelCount = numOutChannels;
+    outputParameters.device = outputDeviceID;
     outputParameters.sampleFormat = paFloat32;
-    err = Pa_IsFormatSupported(inputParameters, outputParameters, requestedSamplingRate);
+    err = Pa_IsFormatSupported(inputParameters, outputParameters, samplingRate);
     if (err != paFormatIsSupported) {}
     // then you would open stream. See http://portaudio.com/docs/v19-doxydocs/querying_devices.html
 #endif
 
     // TODO: pick requested values up from prefs, incl. device choice, using Pa_OpenStream instead of Pa_OpenDefaultStream
     err = Pa_OpenDefaultStream(&stream,
-                               requestedNumInChannels,
-                               requestedNumOutChannels,
+                               numInChannels,
+                               numOutChannels,
                                paFloat32,
-                               requestedSamplingRate,
-                               requestedBlockSize,
+                               samplingRate,
+                               blockSize,
                                &paCallback,
                                this);
     if (err != paNoError) {
@@ -139,6 +200,9 @@ int Audio::initializeAudio()
     }
 
     // FIXME: should be checking to see what the actual srate and blocksize are, etc.
+
+    recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
+    PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
 
     qDebug("Audio initialized");
     return 0;
@@ -178,7 +242,6 @@ int Audio::memberCallback(
 {
     (void) input;
     (void) timeInfo;
-    (void) statusFlags;
 
 #ifdef DEBUG_IN_CALLBACK
     callbackCount++;
@@ -189,12 +252,14 @@ int Audio::memberCallback(
         if ((outputUnderflowCount % 20) == 0)
             qDebug("Five OUTPUT UNDERFLOWs");
     }
+#else
+    (void) statusFlags;
 #endif
 
-    if (recording) {
+    if (nowRecording) {
         int failCount = 0;
         float *ptr = (float *) output;
-        int inSampCount = int(frameCount * requestedNumOutChannels);
+        int inSampCount = int(frameCount * numOutChannels);
         while (inSampCount) {
             int sampsAvail = PaUtil_GetRingBufferWriteAvailable(&recordRingBuffer);
             int writeCount = qMin(inSampCount, sampsAvail);
@@ -249,15 +314,15 @@ int Audio::initializeRTcmix()
     rtcmixInitialized = true;
     // need to destroy rtcmix in case we're here after a config change -- or reconfig it with RTcmix_resetAudio
 
-    status = RTcmix_setAudioBufferFormat(AudioFormat_32BitFloat_Normalized, requestedNumOutChannels);
+    status = RTcmix_setAudioBufferFormat(AudioFormat_32BitFloat_Normalized, numOutChannels);
     if (status != 0) {
         qWarning("RTcmix_setAudioBufferFormat returned error (%d)", status);
         return -1;
     }
 
     // TODO: handle input as well as output
-    int recording = 0;
-    status = RTcmix_setparams(requestedSamplingRate, requestedNumOutChannels, requestedBlockSize, recording, DefaultBusCount);
+    int takingInput = 0;
+    status = RTcmix_setparams(samplingRate, numOutChannels, blockSize, takingInput, busCount);
     if (status != 0) {
         qWarning("RTcmix_setparams returned error (%d)", status);
         return -1;
@@ -281,70 +346,56 @@ int Audio::reInitializeRTcmix()
     return 0;
 }
 
-void Audio::startRecording(const QString &fileName)
+bool Audio::startRecording(const QString &fileName)
 {
     QByteArray ba = fileName.toLatin1();
     char *fname = ba.data();
 
     SF_INFO sfinfo;
     bzero(&sfinfo, sizeof(sfinfo));
-    sfinfo.samplerate = requestedSamplingRate;
-    sfinfo.channels = requestedNumOutChannels;
-    sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT | SF_ENDIAN_LITTLE;
+    sfinfo.samplerate = samplingRate;
+    sfinfo.channels = numOutChannels;
+    if (fileName.endsWith(".wav"))
+        sfinfo.format = SF_FORMAT_WAV | SF_FORMAT_FLOAT;        // TODO: option for SF_FORMAT_PCM_24
+    else if (fileName.endsWith(".aif") || fileName.endsWith(".aiff"))
+        sfinfo.format = SF_FORMAT_AIFF | SF_FORMAT_FLOAT;
+    else {
+        qDebug("startRecording: invalid sound file name extension (must be \".wav\", \".aif\", or \".aiff\")");
+        return false;
+    }
     if (!sf_format_check(&sfinfo)) {
         qDebug("startRecording: invalid sound file format requested");
-        return;
+        return false;
     }
 
-    SNDFILE *sf = sf_open(fname, SFM_WRITE, &sfinfo);
-    if (sf == NULL) {
-        qDebug("startRecording: sf_open returned NULL (%s)", sf_strerror(sf));
-        return;
+    recordFile = sf_open(fname, SFM_WRITE, &sfinfo);
+    if (recordFile == NULL) {
+        qDebug("startRecording: sf_open returned NULL (%s)", sf_strerror(recordFile));
+        return false;
     }
 
-    if (recording) {
-        sf_close(sf);
+    if (nowRecording) {
+        sf_close(recordFile);
         qDebug("startRecording called while already recording!");
-        return;
+        return false;
     }
+
+//    delete recordWorker;
+    recordWorker = new RecordWorker(numOutChannels, &recordRingBuffer, recordFile);
     PaUtil_FlushRingBuffer(&recordRingBuffer);
-    recording = true;
+    nowRecording = true;
+    recordWorker->start();
 
-//******* here's where we should start working in another thread
-
-    // FIXME: for now, test this using the main thread for a definite duration.
-    // This will block the GUI thread.
-    int numFrames = 44100 * 6;
-int totframes = numFrames;
-int totsampswritten = 0;
-    // NB: This will write a total number of frames that is evenly divisible by the audio block size
-    while (numFrames > 0) {
-        int sampsAvail = PaUtil_GetRingBufferReadAvailable(&recordRingBuffer);
-//        int readCount = sampsAvail - (sampsAvail % requestedNumOutChannels); // align on frame boundary
-        if (sampsAvail) {
-            int sampsRead = PaUtil_ReadRingBuffer(&recordRingBuffer, transferBuffer, sampsAvail);
-            if (sampsRead != sampsAvail)
-                qDebug("record ringbuf read request doesn't match samps delivered");
-            numFrames -= (sampsRead / requestedNumOutChannels);
-//qDebug("startRecord: sampsRead=%d => numFrames remaining=%d", sampsRead, numFrames);
-            sf_count_t sampsWritten = sf_write_float(sf, transferBuffer, sampsRead);
-            if (sampsWritten != sampsRead)
-                qDebug().nospace() << "startRecording: sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
-totsampswritten += sampsRead;
-        }
-        //sf_write_sync(sf);  messes up playback. call less frequently, or not at all?
-    }
-    if (sf_close(sf) != 0)
-        qDebug("startRecording: sf_close error: %s", sf_strerror(sf));
-qDebug("finished recording - frames requested: %d, frames written: %d", totframes, totsampswritten / 2);
-    stopRecording();
+    return true;
 }
 
 void Audio::stopRecording()
 {
-    if (!recording)
+    if (!nowRecording)
         return;
-    recording = false;
+    nowRecording = false;
+    //TODO: send signal to worker thread, which sets a flag polled in record loop
+    recordWorker->stop();
 }
 
 
