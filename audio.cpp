@@ -39,20 +39,15 @@
 ****************************************************************************/
 
 #include <QByteArray>
-#include <QComboBox>
 #include <QDebug>
 #include <QFile>
-#include <QLabel>
-#include <QPushButton>
-#include <QSlider>
-#include <QThread>
-#include <QVBoxLayout>
 #include <qmath.h>
 #include <qendian.h>
 
 #include <math.h>
 
 #include "audio.h"
+#include "record.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
 #include "utils.h"
@@ -65,57 +60,6 @@ const int DefaultBusCount = 32;
 
 // FIXME: Might want to realloc this if numchans changes
 const int ringBufferNumSamps = 1024 * 32;
-
-RecordWorker::RecordWorker(int numOutChans, PaUtilRingBuffer *ringBuffer, SNDFILE *outFile, QObject *parentIN)
-        : numOutChans(numOutChans)
-        , ringBuffer(ringBuffer)
-        , outFile(outFile)
-        , transferBuffer(NULL)
-        , parent(parentIN)
-{
-    transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
-
-//    CHECKED_CONNECT(this, SIGNAL(error(QString)), this, SLOT(errorString(QString)));
-    CHECKED_CONNECT(&thread, SIGNAL(started()), this, SLOT(record()));
-
-    CHECKED_CONNECT(this, SIGNAL(finished()), &thread, SLOT(quit()));
-//    CHECKED_CONNECT(this, SIGNAL(finished()), this, SLOT(deleteLater()));
-//    CHECKED_CONNECT(&thread, SIGNAL(finished()), &thread, SLOT(deleteLater()));
-}
-
-RecordWorker::~RecordWorker()
-{
-    if (transferBuffer)
-        free(transferBuffer);
-}
-
-void RecordWorker::record()
-{
-qDebug("entering RecordWorker::record()");
-int totsampswritten = 0;
-    // NB: This will write a total number of frames that is evenly divisible by the audio block size
-    while (1) {
-        int sampsAvail = PaUtil_GetRingBufferReadAvailable(ringBuffer);
-        if (sampsAvail) {
-            int sampsRead = PaUtil_ReadRingBuffer(ringBuffer, transferBuffer, sampsAvail);
-            if (sampsRead != sampsAvail)
-                qDebug("RecordWorker::record(): ringbuf read request doesn't match samps delivered");
-//qDebug("RecordWorker::record(): sampsRead=%d", sampsRead);
-            sf_count_t sampsWritten = sf_write_float(outFile, transferBuffer, sampsRead);
-            if (sampsWritten != sampsRead)
-                qDebug().nospace() << "RecordWorker::record(): sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
-totsampswritten += sampsRead;
-        }
-        if (/*WHAT?*/0) // pretty much have to poll a var in main thread, using mutex
-            break;
-        //sf_write_sync(outFile);  messes up playback. call less frequently, or not at all?
-    }
-    if (sf_close(outFile) != 0)
-        qDebug("RecordWorker::record(): sf_close error: %s", sf_strerror(outFile));
-qDebug("finished recording - frames written: %d", totsampswritten / 2);
-
-    emit finished();
-}
 
 Audio::Audio()
     : portAudioInitialized(false)
@@ -130,7 +74,8 @@ Audio::Audio()
     , busCount(DefaultBusCount)
     , recordFile(NULL)
     , recordBuffer(NULL)
-    , recordWorker(NULL)
+    , transferBuffer(NULL)
+    , recordThreadController(NULL)
     , nowRecording(false)
 {
     int result = initializeAudio();
@@ -157,7 +102,9 @@ Audio::~Audio()
         RTcmix_destroy();
     if (recordBuffer)
         free(recordBuffer);
-    delete recordWorker;
+    if (transferBuffer)
+        free(transferBuffer);
+    delete recordThreadController;
 }
 
 int Audio::initializeAudio()
@@ -203,6 +150,7 @@ int Audio::initializeAudio()
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
+    transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 
     qDebug("Audio initialized");
     return 0;
@@ -380,11 +328,11 @@ bool Audio::startRecording(const QString &fileName)
         return false;
     }
 
-//    delete recordWorker;
-    recordWorker = new RecordWorker(numOutChannels, &recordRingBuffer, recordFile);
+    delete recordThreadController;
+    recordThreadController = new RecordThreadController(numOutChannels, &recordRingBuffer, recordFile, transferBuffer);
     PaUtil_FlushRingBuffer(&recordRingBuffer);
     nowRecording = true;
-    recordWorker->start();
+    recordThreadController->start();
 
     return true;
 }
@@ -394,8 +342,8 @@ void Audio::stopRecording()
     if (!nowRecording)
         return;
     nowRecording = false;
-    //TODO: send signal to worker thread, which sets a flag polled in record loop
-    recordWorker->stop();
+    if (recordThreadController)
+        recordThreadController->stop();
 }
 
 

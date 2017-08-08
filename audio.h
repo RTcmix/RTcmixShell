@@ -3,46 +3,15 @@
 #define AUDIO_H
 
 #include <QObject>
-#include <QThread>
 
 QT_BEGIN_NAMESPACE
-class QMutex;
 class QString;
 QT_END_NAMESPACE
+class RecordThreadController;
 
 #include "portaudio.h"
 #include "pa_ringbuffer.h"
 #include "sndfile.h"
-
-class RecordWorker : public QObject
-{
-    Q_OBJECT
-
-public:
-    RecordWorker(int, PaUtilRingBuffer *, SNDFILE *, QObject *parentIN = 0);
-    ~RecordWorker();
-    void start()
-    {
-        this->moveToThread(&thread);
-        thread.start(/*QThread::LowPriority*/);
-    }
-    void stop();
-
-    QObject *parent;
-    QThread thread;
-
-public slots:
-    void record();
-
-signals:
-    void finished();
-
-private:
-    int numOutChans;
-    PaUtilRingBuffer *ringBuffer;
-    SNDFILE *outFile;
-    float *transferBuffer;
-};
 
 class Audio : public QObject
 {
@@ -96,7 +65,8 @@ private:
     PaUtilRingBuffer recordRingBuffer;
     SNDFILE *recordFile;
     float *recordBuffer;
-    RecordWorker *recordWorker;
+    float *transferBuffer;
+    RecordThreadController *recordThreadController;
     std::atomic<bool> nowRecording;
 
 #ifdef NOTYET   // should move to main window

@@ -26,6 +26,7 @@ void rtcmixFinishedCallback(long long frameCount, void *inContext);
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , playing(false)
+    , recording(false)
     , firstFileDialog(true)
 {
 #ifdef Q_OS_OSX
@@ -564,7 +565,12 @@ Q_UNUSED(level);
 
 void MainWindow::stopScore()
 {
-    audio->stopRecording();
+    if (recording) {
+        audio->stopRecording();
+        actionRecord->setEnabled(true);
+        recordButton->setEnabled(true);
+        recording = false;
+    }
     xableScoreActions(false);
     scoreFinishedTimer->stop();
     playing = false;
@@ -602,6 +608,12 @@ void MainWindow::record()
     qDebug() << "recording into file:" << fileName;
     if (!playing)
         playScore();
-    audio->startRecording(fileName);    // FIXME: once this runs on its own thread, put it before playScore
+    if (!recording) {
+        recording = true;
+        audio->startRecording(fileName);    // FIXME: this before playScore?
+        actionRecord->setEnabled(false);
+        recordButton->setEnabled(false);
+    }
     qDebug("returned from startRecording");
 }
+

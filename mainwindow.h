@@ -102,6 +102,7 @@ private:
     };
     ScorePlayMode scorePlayMode;
     bool playing;
+    bool recording;
     bool firstFileDialog;
 };
 
