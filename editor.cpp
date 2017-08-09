@@ -34,6 +34,7 @@ void Editor::dragEnterEvent(QDragEnterEvent *event)
 // code drawn from https://wiki.qt.io/Drag_and_Drop_of_files
 void Editor::dropEvent(QDropEvent *event)
 {
+    bool dropped = false;
     const QMimeData *md = event->mimeData();
 
     if (md->hasUrls()) {
@@ -48,23 +49,28 @@ void Editor::dropEvent(QDropEvent *event)
         QMimeDatabase db;                          // NB only for Qt5
         QMimeType type = db.mimeTypeForFile(path);
 //FIXME: should we open text files, or insert their contents?
-        if (type.name() == "text/plain" || path.endsWith(".sco"))
+        if (type.name() == "text/plain" || path.endsWith(".sco")) {
+            dropped = true;
             emit loadFile(path);
+        }
         else if (type.name() == "audio/x-wav" || type.name() == "audio/x-aiff") {
             QString text = path;
             text.prepend("rtinput(\"");
             text.append("\")");
             QTextCursor cursor = this->textCursor();
             cursor.insertText(text);
-
-            // If we don't do the following three lines, the cursor will be frozen
-            // and unblinking. Found this in a post by "baohaojun" (5/5/17):
-            // http://www.qtcentre.org/archive/index.php/t-16935.html
-            this->setReadOnly(true);
-            QTextEdit::dropEvent(event);
-            this->setReadOnly(false);
+            dropped = true;
         }
 #endif
+    }
+
+    if (dropped) {
+        // If we don't do the following three lines, the cursor will be frozen
+        // and unblinking. Found this in a post by "baohaojun" (5/5/17):
+        // http://www.qtcentre.org/archive/index.php/t-16935.html
+        this->setReadOnly(true);
+        QTextEdit::dropEvent(event);
+        this->setReadOnly(false);
     }
 }
 
