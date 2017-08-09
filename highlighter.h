@@ -82,11 +82,12 @@ private:
 
     QTextCharFormat keywordFormat;
     QTextCharFormat numberFormat;
+    QTextCharFormat quotationFormat;
+    QTextCharFormat functionFormat;
+    QTextCharFormat invalidFuncsFormat;
     QTextCharFormat singleLineCommentFormat;
     QTextCharFormat hashLineCommentFormat;
     QTextCharFormat multiLineCommentFormat;
-    QTextCharFormat quotationFormat;
-    QTextCharFormat functionFormat;
 };
 
 #endif // HIGHLIGHTER_H

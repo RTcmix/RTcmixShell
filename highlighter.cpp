@@ -48,6 +48,8 @@
 **
 ****************************************************************************/
 
+#include <QtDebug>
+
 #include "highlighter.h"
 
 Highlighter::Highlighter(QTextDocument *parent)
@@ -63,45 +65,56 @@ Highlighter::Highlighter(QTextDocument *parent)
                     << "\\bfor\\b" << "\\bwhile\\b" << "\\binclude\\b" << "\\bhandle\\b" << "\\blist\\b"
                     << "\\btrue\\b" << "\\bfalse\\b" << "\\bTRUE\\b" << "\\bFALSE\\b";
     foreach (const QString &pattern, keywordPatterns) {
-        rule.pattern = QRegularExpression(pattern);
         rule.format = keywordFormat;
+        rule.pattern = QRegularExpression(pattern);
         highlightingRules.append(rule);
     }
 
     // 2. numbers
     numberFormat.setForeground(Qt::red);
-    rule.pattern = QRegularExpression("\\.?\\b\\d+\\.?\\d?\\b\\.?");
     rule.format = numberFormat;
+    rule.pattern = QRegularExpression("\\.?\\b\\d+\\.?\\d?\\b\\.?");
     highlightingRules.append(rule);
 
     // 3. double-quoted strings
     quotationFormat.setForeground(Qt::red);
-    rule.pattern = QRegularExpression("\".*\"");
     rule.format = quotationFormat;
+    rule.pattern = QRegularExpression("\".*\"");
     highlightingRules.append(rule);
 
     // 4. functions, including instruments (i.e., anything except keywords that are followed by '(')
 //    functionFormat.setFontItalic(true);
     functionFormat.setForeground(Qt::darkGreen);
-    rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
     rule.format = functionFormat;
+    rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
     highlightingRules.append(rule);
 
-    // 5. C++-style comments
+    // 5. RTcmix commands that don't function in this environment, currently:
+    //    rtsetparams, rtoutput, load
+    invalidFuncsFormat.setForeground(Qt::darkGray);
+    rule.format = invalidFuncsFormat;
+    rule.pattern = QRegularExpression("\\s*rtsetparams\\s*\\(.*\\).*");
+    highlightingRules.append(rule);
+    qDebug() << "rule.pattern" << rule.pattern;
+    rule.pattern = QRegularExpression("\\s*rtoutput\\s*\\(.*\\).*");
+    highlightingRules.append(rule);
+    rule.pattern = QRegularExpression("\\s*load\\s*\\(.*\\).*");
+    highlightingRules.append(rule);
+
+    // 6. C++-style comments
     singleLineCommentFormat.setForeground(Qt::blue);
-    rule.pattern = QRegularExpression("//[^\n]*");
     rule.format = singleLineCommentFormat;
+    rule.pattern = QRegularExpression("//[^\n]*");
     highlightingRules.append(rule);
 
-    // 6. shell-style comments (beginning with '#')
+    // 7. shell-style comments (beginning with '#')
     hashLineCommentFormat.setForeground(Qt::blue);
-    rule.pattern = QRegularExpression("#[^\n]*");
     rule.format = hashLineCommentFormat;
+    rule.pattern = QRegularExpression("#[^\n]*");
     highlightingRules.append(rule);
 
-    // 7. C-style multiline comments
+    // 8. C-style multiline comments
     multiLineCommentFormat.setForeground(Qt::blue);
-
     commentStartExpression = QRegularExpression("/\\*");
     commentEndExpression = QRegularExpression("\\*/");
 }
