@@ -46,8 +46,6 @@ MainWindow::MainWindow(QWidget *parent)
 
     setDefaultFont();
 
-    setAcceptDrops(true);
-
     RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
     scoreFinishedTimer = new QTimer(this);
     CHECKED_CONNECT(scoreFinishedTimer, &QTimer::timeout, this, &MainWindow::checkScoreFinished);

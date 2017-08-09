@@ -1,3 +1,5 @@
+#include <QtDebug>
+#include <QFileInfo>
 #include <QMimeData>
 #include <QMimeDatabase>
 
@@ -16,7 +18,6 @@ Editor::Editor(MainWindow *parent) : QTextEdit(parent), parent(parent)
     CHECKED_CONNECT(this, &Editor::loadFile, parent, &MainWindow::loadFile);
 
     setAcceptDrops(true);
-//    viewport()->setAcceptDrops(true);
 }
 
 void Editor::dragEnterEvent(QDragEnterEvent *event)
@@ -26,9 +27,10 @@ void Editor::dragEnterEvent(QDragEnterEvent *event)
             || md->hasFormat("text/plain")
             || md->hasFormat("audio/wav")
             || md->hasFormat("audio/x-aiff")) {
-//FIXME: also accept folders - how?
         event->acceptProposedAction();
     }
+    if (md->hasUrls())
+        event->acceptProposedAction();
 }
 
 // code drawn from https://wiki.qt.io/Drag_and_Drop_of_files
@@ -46,22 +48,27 @@ void Editor::dropEvent(QDropEvent *event)
         }
 #else
         QString path = urlList.at(0).toLocalFile();
+        QFileInfo fileInfo(path);
         QMimeDatabase db;                          // NB only for Qt5
         QMimeType type = db.mimeTypeForFile(path);
-//FIXME: should we open text files, or insert their contents?
         if (type.name() == "text/plain" || path.endsWith(".sco")) {
             dropped = true;
             emit loadFile(path);
         }
-        else if (type.name() == "audio/x-wav" || type.name() == "audio/x-aiff") {
+        else if (type.name() == "audio/x-wav" || type.name() == "audio/x-aiff" || fileInfo.isDir()) {
             QString text = path;
-            text.prepend("rtinput(\"");
-            text.append("\")");
+            text.prepend("\"");
+            text.append("\"");
             QTextCursor cursor = this->textCursor();
             cursor.insertText(text);
             dropped = true;
         }
 #endif
+    }
+    else if (md->hasText()) {
+        QTextCursor cursor = this->textCursor();
+        cursor.insertText(event->mimeData()->text());
+        dropped = true;
     }
 
     if (dropped) {
