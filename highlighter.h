@@ -58,6 +58,7 @@
 QT_BEGIN_NAMESPACE
 class QTextDocument;
 QT_END_NAMESPACE
+class Preferences;
 
 class Highlighter : public QSyntaxHighlighter
 {
@@ -88,6 +89,8 @@ private:
     QTextCharFormat singleLineCommentFormat;
     QTextCharFormat hashLineCommentFormat;
     QTextCharFormat multiLineCommentFormat;
+
+    Preferences *syntaxHighlightingPreferences;
 };
 
 #endif // HIGHLIGHTER_H

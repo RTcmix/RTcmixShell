@@ -13,6 +13,7 @@ class QTabWidget;
 QT_END_NAMESPACE
 class Preferences;
 
+#ifdef GENERALTAB
 class GeneralTab : public QWidget
 {
     Q_OBJECT
@@ -20,6 +21,7 @@ class GeneralTab : public QWidget
 public:
     explicit GeneralTab(QWidget *parent = 0);
 };
+#endif
 
 class EditorTab : public QWidget
 {
@@ -27,6 +29,14 @@ class EditorTab : public QWidget
 
 public:
     explicit EditorTab(QWidget *parent = 0);
+};
+
+class SyntaxHighlightingTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit SyntaxHighlightingTab(QWidget *parent = 0);
 };
 
 class AudioTab : public QWidget
@@ -37,13 +47,14 @@ public:
     explicit AudioTab(QWidget *parent = 0);
 };
 
+
 class PreferencesDialog : public QDialog
 {
     Q_OBJECT
 
 public:
     explicit PreferencesDialog(QWidget *parent = 0);
-    applyPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 
 private:
     QTabWidget *tabWidget;

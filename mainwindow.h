@@ -17,7 +17,7 @@ QT_END_NAMESPACE
 class Audio;
 class Editor;
 class RTcmixLogView;
-class Settings;
+class Preferences;
 
 class MainWindow : public QMainWindow
 {
@@ -47,7 +47,7 @@ private slots:
     void setScorePlayMode();
 
 private:
-    void createSettings();
+    void createPreferences();
     void createActions();
     void createFileActions();
     void createEditActions();
@@ -73,7 +73,7 @@ private:
     Audio *audio;
     Editor *curEditor;
     RTcmixLogView *rtcmixLogView;
-    Settings *appSettings;
+    Preferences *mainWindowPreferences;
     QSplitter *splitter;
     QString fileName;
     QAction *actionNewFile;
@@ -86,6 +86,7 @@ private:
     QAction *actionCut;
     QAction *actionCopy;
     QAction *actionPaste;
+    QAction *actionPrefs;
     QAction *actionPlay;
     QAction *actionStop;
     QAction *actionRecord;

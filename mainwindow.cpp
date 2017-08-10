@@ -7,7 +7,7 @@
 #include "highlighter.h"
 #include "mainwindow.h"
 #include "rtcmixlogview.h"
-#include "settings.h"
+#include "preferences.h"
 #include "RTcmix_API.h"
 #include "utils.h"
 
@@ -33,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     setWindowTitle(QCoreApplication::applicationName());
 
-    createSettings();
+    createPreferences();
 
     audio = new Audio;
 
@@ -55,9 +55,9 @@ MainWindow::MainWindow(QWidget *parent)
     curEditor->setFocus();
 }
 
-void MainWindow::createSettings()
+void MainWindow::createPreferences()
 {
-    appSettings = new Settings();
+    mainWindowPreferences = new Preferences();
 
     // window size, position to use if no settings
     const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
@@ -67,8 +67,8 @@ void MainWindow::createSettings()
     int y = (availableGeometry.height() - this->height()) / 2;
 
     // use stored window geometry, or the defaults computed above
-    resize(appSettings->mainWindowSize(QSize(width, height)));
-    move(appSettings->mainWindowPosition(QPoint(x, y)));
+    resize(mainWindowPreferences->mainWindowSize(QSize(width, height)));
+    move(mainWindowPreferences->mainWindowPosition(QPoint(x, y)));
 }
 
 void MainWindow::createActions()
@@ -146,6 +146,11 @@ void MainWindow::createEditActions()
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
     CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QTextEdit::paste);
 
+    actionPrefs = new QAction(tr("Pre&ferences"), this);
+    actionPrefs->setShortcut(QKeySequence::Preferences);
+    actionPrefs->setStatusTip(tr("Edit application settings"));
+    CHECKED_CONNECT(actionPrefs, &QAction::triggered, mainWindowPreferences, &Preferences::showPreferencesDialog);
+
     CHECKED_CONNECT(QApplication::clipboard(), &QClipboard::dataChanged, this, &MainWindow::clipboardDataChanged);
 }
 
@@ -162,8 +167,7 @@ void MainWindow::createScoreActions()
     actionStop->setEnabled(false);
     CHECKED_CONNECT(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
-    const QIcon recordIcon = QIcon::fromTheme("media-record", QIcon(rsrcPath + "/record.png"));
-    actionRecord = new QAction(recordIcon, tr("&Record"), this);
+    actionRecord = new QAction(tr("&Record"), this);
     actionRecord->setShortcut(Qt::CTRL + Qt::Key_R);
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
     CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
@@ -201,6 +205,8 @@ void MainWindow::createMenus()
     editMenu->addAction(actionCut);
     editMenu->addAction(actionCopy);
     editMenu->addAction(actionPaste);
+    editMenu->addSeparator();
+    editMenu->addAction(actionPrefs);   // this will appear in application menu on macOS
 
     scoreMenu = menuBar()->addMenu(tr("&Score"));
     scoreMenu->addAction(actionPlay);
@@ -274,14 +280,14 @@ void MainWindow::createToolbars()
 
 void MainWindow::initFonts()
 {
-    QFont font(appSettings->editorFontName(), appSettings->editorFontSize());
+    QFont font(mainWindowPreferences->editorFontName(), mainWindowPreferences->editorFontSize());
 //    font.setStyleHint(QFont::Monospace);
 //    font.setFixedPitch(true);
     curEditor->setFont(font);
-    curEditor->setTabStopChars(appSettings->editorTabWidth());
+    curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
 
-    font.setFamily(appSettings->logFontName());
-    font.setPointSize(appSettings->logFontSize());
+    font.setFamily(mainWindowPreferences->logFontName());
+    font.setPointSize(mainWindowPreferences->logFontSize());
 //    font.setStyleHint(QFont::Monospace);
 //    font.setFixedPitch(true);
     rtcmixLogView->setFont(font);
@@ -318,13 +324,13 @@ void MainWindow::textFamily(const QString &f)
     QFont font = curEditor->font();
     font.setFamily(f);
     curEditor->setFont(font);
-    curEditor->setTabStopChars(appSettings->editorTabWidth());
+    curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
     updateFontMenus(curEditor->font());   
 
     rtcmixLogView->setFont(font);
 
-    appSettings->setEditorFontName(f);
-    appSettings->setLogFontName(f);
+    mainWindowPreferences->setEditorFontName(f);
+    mainWindowPreferences->setLogFontName(f);
 }
 
 void MainWindow::textSize(const QString &p)
@@ -334,12 +340,12 @@ void MainWindow::textSize(const QString &p)
         QFont font = curEditor->font();
         font.setPointSize(pointSize);
         curEditor->setFont(font);
-        curEditor->setTabStopChars(appSettings->editorTabWidth());
+        curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
         updateFontMenus(curEditor->font());
-        font.setPointSize(appSettings->logFontSize());
+        font.setPointSize(mainWindowPreferences->logFontSize());
         rtcmixLogView->setFont(font);
 
-        appSettings->setEditorFontSize(pointSize);
+        mainWindowPreferences->setEditorFontSize(pointSize);
     }
 }
 
@@ -367,8 +373,8 @@ void MainWindow::about()
 void MainWindow::closeEvent(QCloseEvent *e)
 {
     if (maybeSave()) {
-        appSettings->setMainWindowSize(size());
-        appSettings->setMainWindowPosition(pos());
+        mainWindowPreferences->setMainWindowSize(size());
+        mainWindowPreferences->setMainWindowPosition(pos());
         e->accept();
     }
     else

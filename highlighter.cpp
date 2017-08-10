@@ -51,10 +51,13 @@
 #include <QtDebug>
 
 #include "highlighter.h"
+#include "preferences.h"
 
 Highlighter::Highlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {
+    syntaxHighlightingPreferences = new Preferences();
+
     HighlightingRule rule;
 
     // 1. reserved key words

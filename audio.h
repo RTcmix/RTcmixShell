@@ -8,7 +8,7 @@ QT_BEGIN_NAMESPACE
 class QString;
 QT_END_NAMESPACE
 class RecordThreadController;
-class Settings;
+class Preferences;
 
 #include "portaudio.h"
 #include "pa_ringbuffer.h"
@@ -55,8 +55,8 @@ private:
     int callbackCount;
     int outputUnderflowCount;
 
-    // sync these with settings dlog
-    Settings *audioSettings;
+    // sync these with prefs dlog
+    Preferences *audioPreferences;
     int inputDeviceID;
     int outputDeviceID;
     float samplingRate;
