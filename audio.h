@@ -8,10 +8,12 @@ QT_BEGIN_NAMESPACE
 class QString;
 QT_END_NAMESPACE
 class RecordThreadController;
+class Settings;
 
 #include "portaudio.h"
 #include "pa_ringbuffer.h"
 #include "sndfile.h"
+
 
 class Audio : public QObject
 {
@@ -54,6 +56,7 @@ private:
     int outputUnderflowCount;
 
     // sync these with settings dlog
+    Settings *audioSettings;
     int inputDeviceID;
     int outputDeviceID;
     float samplingRate;

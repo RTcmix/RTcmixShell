@@ -79,6 +79,8 @@ public:
 #endif
 
 private:
+    void reportError();
+
     QSettings *settings;
 };
 

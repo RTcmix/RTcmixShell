@@ -50,13 +50,8 @@
 #include "record.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
+#include "settings.h"
 #include "utils.h"
-
-const float DefaultSamplingRate = 44100.0;
-const int DefaultNumInChannels = 0;
-const int DefaultNumOutChannels = 2;
-const int DefaultBlockSize = 512;
-const int DefaultBusCount = 32;
 
 // FIXME: Might want to realloc this if numchans changes
 const int ringBufferNumSamps = 1024 * 32;
@@ -67,17 +62,27 @@ Audio::Audio()
     , stream(NULL)
     , inputDeviceID(0)
     , outputDeviceID(0)
-    , samplingRate(DefaultSamplingRate)
-    , numInChannels(DefaultNumInChannels)
-    , numOutChannels(DefaultNumOutChannels)
-    , blockSize(DefaultBlockSize)
-    , busCount(DefaultBusCount)
+    , samplingRate(0)
+    , numInChannels(0)
+    , numOutChannels(0)
+    , blockSize(0)
+    , busCount(0)
     , recordFile(NULL)
     , recordBuffer(NULL)
     , transferBuffer(NULL)
     , recordThreadController(NULL)
     , nowRecording(false)
 {
+    audioSettings = new Settings(); // supposedly this syncs with the MainWindow-owned settings, even though different object.
+
+    inputDeviceID = audioSettings->audioInputDeviceID();
+    outputDeviceID = audioSettings->audioOutputDeviceID();
+    samplingRate = audioSettings->audioSamplingRate();
+    numInChannels = audioSettings->audioNumInputChannels();
+    numOutChannels = audioSettings->audioNumOutputChannels();
+    blockSize = audioSettings->audioBlockSize();
+    busCount = audioSettings->audioNumBuses();
+
     int result = initializeAudio();
     if (result == 0) {
         result = initializeRTcmix();
@@ -147,6 +152,15 @@ int Audio::initializeAudio()
     }
 
     // FIXME: should be checking to see what the actual srate and blocksize are, etc.
+
+    // FIXME: not sure we should do it this way
+    audioSettings->setAudioInputDeviceID(inputDeviceID);
+    audioSettings->setAudioOutputDeviceID(outputDeviceID);
+    audioSettings->setAudioSamplingRate(samplingRate);
+    audioSettings->setAudioNumInputChannels(numInChannels);
+    audioSettings->setAudioNumOutputChannels(numOutChannels);
+    audioSettings->setAudioBlockSize(blockSize);
+    audioSettings->setAudioNumBuses(busCount);
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
