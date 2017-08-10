@@ -1,15 +1,62 @@
-#ifndef SETTINGS_H
-#define SETTINGS_H
+#ifndef PREFERENCES_H
+#define PREFERENCES_H
 
+#include <QDialog>
 #include <QPoint>
 #include <QSettings>
 #include <QSize>
+#include <QWidget>
 
-class Settings
+QT_BEGIN_NAMESPACE
+class QDialogButtonBox;
+class QTabWidget;
+QT_END_NAMESPACE
+class Preferences;
+
+class GeneralTab : public QWidget
 {
+    Q_OBJECT
+
 public:
-    Settings();
-    void saveSettings();
+    explicit GeneralTab(QWidget *parent = 0);
+};
+
+class EditorTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit EditorTab(QWidget *parent = 0);
+};
+
+class AudioTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit AudioTab(QWidget *parent = 0);
+};
+
+class PreferencesDialog : public QDialog
+{
+    Q_OBJECT
+
+public:
+    explicit PreferencesDialog(QWidget *parent = 0);
+    applyPreferences(Preferences *);
+
+private:
+    QTabWidget *tabWidget;
+    QDialogButtonBox *okCancelButtonBox;
+};
+
+class Preferences : public QObject
+{
+    Q_OBJECT
+
+public:
+    Preferences();
+    void savePreferences();
 
     // accessors - the getter methods return a default value if none is saved in settings file
 
@@ -78,10 +125,17 @@ public:
     void setAudioAllowOverlappingScores(bool allow) { settings->setValue("audio/allowOverlappingScores", allow); }
 #endif
 
+    bool audioShowOverlappingScoresWarning() { return settings->value("audio/showOverlappingScoresWarning", true).toBool(); }
+    void setAudioShowOverlappingScoresWarning(bool show) { settings->setValue("audio/showOverlappingScoresWarning", show); }
+
+public slots:
+    void showPreferencesDialog();
+
 private:
+    void applyPreferences();
     void reportError();
 
     QSettings *settings;
 };
 
-#endif // SETTINGS_H
+#endif // PREFERENCES_H
