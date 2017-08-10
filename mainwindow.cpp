@@ -5,8 +5,9 @@
 #include "audio.h"
 #include "editor.h"
 #include "highlighter.h"
-#include "rtcmixlogview.h"
 #include "mainwindow.h"
+#include "rtcmixlogview.h"
+#include "settings.h"
 #include "RTcmix_API.h"
 #include "utils.h"
 
@@ -16,8 +17,6 @@ const QString rsrcPath = ":/images/mac";
 const QString rsrcPath = ":/images/win";
 #endif
 
-const int defaultTabStopChars = 4;      // FIXME: turn this into a pref
-const int logFontSize = 12;
 const int scoreFinishedTimerInterval = 100; // msec
 
 void rtcmixFinishedCallback(long long frameCount, void *inContext);
@@ -34,6 +33,8 @@ MainWindow::MainWindow(QWidget *parent)
 #endif
     setWindowTitle(QCoreApplication::applicationName());
 
+    createSettings();
+
     audio = new Audio;
 
     createEditors();
@@ -44,7 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
     createMenus();
     createToolbars();
 
-    setDefaultFont();
+    initFonts();
 
     RTcmix_setFinishedCallback(rtcmixFinishedCallback, this);
     scoreFinishedTimer = new QTimer(this);
@@ -52,6 +53,22 @@ MainWindow::MainWindow(QWidget *parent)
     setScorePlayMode(); // defaults to Exclusive, because menu action initially unchecked
 
     curEditor->setFocus();
+}
+
+void MainWindow::createSettings()
+{
+    appSettings = new Settings();
+
+    // window size, position to use if no settings
+    const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
+    int width = qMin(availableGeometry.width() / 2, 800);
+    int height = (availableGeometry.height() * 2) / 3;
+    int x = (availableGeometry.width() - this->width()) / 2;
+    int y = (availableGeometry.height() - this->height()) / 2;
+
+    // use stored window geometry, or the defaults computed above
+    resize(appSettings->mainWindowSize(QSize(width, height)));
+    move(appSettings->mainWindowPosition(QPoint(x, y)));
 }
 
 void MainWindow::createActions()
@@ -255,16 +272,21 @@ void MainWindow::createToolbars()
     CHECKED_CONNECT(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textSize);
 }
 
-void MainWindow::setDefaultFont()
+void MainWindow::initFonts()
 {
-    QFont textFont("Courier");
-    textFont.setStyleHint(QFont::Monospace);
-    textFont.setFixedPitch(true);
-    textFont.setPointSize(12);
-    curEditor->setFont(textFont);
-    rtcmixLogView->setFont(textFont);
+    QFont font(appSettings->editorFontName(), appSettings->editorFontSize());
+//    font.setStyleHint(QFont::Monospace);
+//    font.setFixedPitch(true);
+    curEditor->setFont(font);
+    curEditor->setTabStopChars(appSettings->editorTabWidth());
+
+    font.setFamily(appSettings->logFontName());
+    font.setPointSize(appSettings->logFontSize());
+//    font.setStyleHint(QFont::Monospace);
+//    font.setFixedPitch(true);
+    rtcmixLogView->setFont(font);
+
     updateFontMenus(curEditor->font());
-    curEditor->setTabStopChars(defaultTabStopChars);
 }
 
 // NB: plural, in anticipation of tabbed editors
@@ -296,10 +318,13 @@ void MainWindow::textFamily(const QString &f)
     QFont font = curEditor->font();
     font.setFamily(f);
     curEditor->setFont(font);
-    curEditor->setTabStopChars(defaultTabStopChars);
-    updateFontMenus(curEditor->font());
-    font.setPointSize(12);
+    curEditor->setTabStopChars(appSettings->editorTabWidth());
+    updateFontMenus(curEditor->font());   
+
     rtcmixLogView->setFont(font);
+
+    appSettings->setEditorFontName(f);
+    appSettings->setLogFontName(f);
 }
 
 void MainWindow::textSize(const QString &p)
@@ -309,10 +334,12 @@ void MainWindow::textSize(const QString &p)
         QFont font = curEditor->font();
         font.setPointSize(pointSize);
         curEditor->setFont(font);
-        curEditor->setTabStopChars(defaultTabStopChars);
+        curEditor->setTabStopChars(appSettings->editorTabWidth());
         updateFontMenus(curEditor->font());
-        font.setPointSize(logFontSize);
+        font.setPointSize(appSettings->logFontSize());
         rtcmixLogView->setFont(font);
+
+        appSettings->setEditorFontSize(pointSize);
     }
 }
 
@@ -330,15 +357,20 @@ void MainWindow::updateFontMenus(const QFont &f)
 
 void MainWindow::about()
 {
-    QString str = tr("<h3>RTcmixShell " VERSION_STR "</h3>"
-            "<p>John Gibson, Brad Garton, Doug Scott</p>");
-    QMessageBox::about(this, tr("About"), str);
+    QString text = QCoreApplication::applicationVersion();
+    text.prepend(tr("<h3>RTcmixShell "));
+    text.append(tr("</h3>"
+                   "<p>John Gibson, Brad Garton, Doug Scott</p>"));
+    QMessageBox::about(this, tr("About"), text);
 }
 
 void MainWindow::closeEvent(QCloseEvent *e)
 {
-    if (maybeSave())
+    if (maybeSave()) {
+        appSettings->setMainWindowSize(size());
+        appSettings->setMainWindowPosition(pos());
         e->accept();
+    }
     else
         e->ignore();
 }

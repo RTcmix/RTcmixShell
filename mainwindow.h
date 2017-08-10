@@ -9,6 +9,7 @@ class QComboBox;
 class QFontComboBox;
 class QMenu;
 class QPushButton;
+class QSettings;
 class QSplitter;
 class QTextEdit;
 class QTimer;
@@ -16,8 +17,7 @@ QT_END_NAMESPACE
 class Audio;
 class Editor;
 class RTcmixLogView;
-
-#define VERSION_STR	"v1.0b2"
+class Settings;
 
 class MainWindow : public QMainWindow
 {
@@ -47,6 +47,7 @@ private slots:
     void setScorePlayMode();
 
 private:
+    void createSettings();
     void createActions();
     void createFileActions();
     void createEditActions();
@@ -54,7 +55,7 @@ private:
     void createTextActions();
     void createMenus();
     void createToolbars();
-    void setDefaultFont();
+    void initFonts();
     void createEditors();
     void createVerticalSplitter();
     void setCurrentFileName(const QString &);
@@ -65,11 +66,14 @@ private:
     void setScorePrintLevel(int);
     void sendScoreFragment(char *);
     bool chooseRecordFilename(QString &);
+    void loadSettings();
+    void saveSettings();
     void debug();
 
     Audio *audio;
     Editor *curEditor;
     RTcmixLogView *rtcmixLogView;
+    Settings *appSettings;
     QSplitter *splitter;
     QString fileName;
     QAction *actionNewFile;

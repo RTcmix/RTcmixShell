@@ -52,18 +52,23 @@
 #include "mainwindow.h"
 
 #include <QApplication>
-#include <QDesktopWidget>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
+
+#define APP_ORGANIZATION_NAME       "RTcmix"
+#define APP_ORGANIZATION_DOMAIN     "rtcmix.org"
+#define APP_NAME                    "RTcmixShell"
+#define APP_VERSION_STR             "v1.0b2"
 
 int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(RTcmixShell);
 
     QApplication a(argc, argv);
-    QCoreApplication::setOrganizationName("RTcmix");
-    QCoreApplication::setApplicationName("RTcmixShell");
-    QCoreApplication::setApplicationVersion(QT_VERSION_STR);
+    QCoreApplication::setOrganizationName(APP_ORGANIZATION_NAME);
+    QCoreApplication::setOrganizationDomain(APP_ORGANIZATION_DOMAIN);
+    QCoreApplication::setApplicationName(APP_NAME);
+    QCoreApplication::setApplicationVersion(APP_VERSION_STR);
     QCommandLineParser parser;
     parser.setApplicationDescription(QCoreApplication::applicationName());
     parser.addHelpOption();
@@ -72,12 +77,6 @@ int main(int argc, char *argv[])
     parser.process(a);
 
     MainWindow mw;
-
-    const QRect availableGeometry = QApplication::desktop()->availableGeometry(&mw);
-    int width = qMin(availableGeometry.width() / 2, 800);
-    mw.resize(width, (availableGeometry.height() * 2) / 3);
-    mw.move((availableGeometry.width() - mw.width()) / 2,
-            (availableGeometry.height() - mw.height()) / 2);
 
     //   if (!mw.loadFile(parser.positionalArguments().value(0, QLatin1String(":/starter.sco"))))
     if (!mw.loadFile(parser.positionalArguments().value(0)))

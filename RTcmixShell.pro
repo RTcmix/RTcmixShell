@@ -13,6 +13,7 @@ HEADERS         = audio.h \
                   record.h \
                   RTcmix_API.h \
                   rtcmixlogview.h \
+                  settings.h \
                   sndfile.h \
                   utils.h
 
@@ -23,7 +24,8 @@ SOURCES         = audio.cpp \
                   main.cpp \
                   pa_ringbuffer.c \
                   record.cpp \
-                  rtcmixlogview.cpp
+                  rtcmixlogview.cpp \
+                  settings.cpp
 
 RESOURCES += RTcmixShell.qrc
 
