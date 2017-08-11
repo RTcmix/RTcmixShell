@@ -41,6 +41,7 @@
 #include <QByteArray>
 #include <QDebug>
 #include <QFile>
+#include <QVector>
 #include <qmath.h>
 #include <qendian.h>
 
@@ -355,6 +356,108 @@ void Audio::stopRecording()
 }
 
 
+// --------------------------------------------------------------------------
+// Device discovery and info
+
+// Return number of output devices, or -1 if error.
+// Pass back QVector of current output device IDs.
+// QVector is owned by caller.
+int availableOutputDeviceIDs(QVector<int> &idList)
+{
+    int numDevices = Pa_GetDeviceCount();
+    if (numDevices < 0) {
+        qWarning("availableOutputDeviceIDs: no device IDs discovered");    // FIXME: pop alert instead
+        return -1;
+    }
+
+    const PaDeviceInfo *deviceInfo;
+    int count = 0;
+    for (int id = 0; id < numDevices; id++) {
+        deviceInfo = Pa_GetDeviceInfo(id);
+        if (deviceInfo == NULL) {
+            qWarning("availableOutputDeviceIDs: can't get info for device %d", id);    // FIXME: pop alert instead
+            return -1;
+        }
+        if (deviceInfo->maxOutputChannels > 0) {
+            idList.append(id);
+            count++;
+        }
+    }
+
+    return count;
+}
+
+// Return device ID of default output device, or -1 if error.
+int defaultOutputDevice()
+{
+    int numDevices = Pa_GetDeviceCount();
+    for (int id = 0; id < numDevices; id++) {
+        if (id == Pa_GetDefaultOutputDevice())
+            return id;
+    }
+    return -1;
+}
+
+int deviceIDFromName(const QString name)
+{
+    const PaDeviceInfo *deviceInfo;
+    int numDevices = Pa_GetDeviceCount();
+    for (int id = 0; id < numDevices; id++) {
+        deviceInfo = Pa_GetDeviceInfo(id);
+        if (deviceInfo == NULL) {
+            qWarning("deviceIDFromName: can't get info for device %d", id);    // FIXME: pop alert instead
+            return -1;
+        }
+        if (deviceInfo->name == name)
+            return id;
+    }
+    return -1;
+}
+
+// Pass back a string, owned by caller, with the name of the device
+// with the given device ID. Return -1 if error, 0 if not.
+int deviceNameFromID(const int deviceID, QString &name)
+{
+    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(deviceID);
+    name = deviceInfo->name;
+    return 0;
+}
+
+// Return the max output channel count for the given device.
+int maxOutputChannelCount(const int deviceID)
+{
+    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(deviceID);
+    return deviceInfo->maxOutputChannels;
+}
+
+// Return number of available sampling rates that are valid for the given
+// device ID and output channel count. Return -1 if error. Pass back
+// QVector of valid sampling rates, which is owned by caller.
+int availableSamplingRates(const int deviceID, const int numOutputChannels, QVector<int> &rates)
+{
+    PaError err = paNoError;
+    PaStreamParameters outParams;
+    bzero(&outParams, sizeof(outParams));
+    outParams.channelCount = numOutputChannels;
+    outParams.device = deviceID;
+    outParams.sampleFormat = paFloat32;
+
+    static int standardSamplingRates[] = { 22050, 44100, 48000, 88200, 96000, -1 };
+    int count = 0;
+    for (int i = 0; standardSamplingRates[i] > 0; i++) {
+        err = Pa_IsFormatSupported(NULL, &outParams, standardSamplingRates[i]);
+        if (err == paFormatIsSupported) {
+            rates.append(standardSamplingRates[i]);
+            count++;
+        }
+        else
+            goto error;
+    }
+    return count;
+error:
+    qWarning("availableSamplingRates: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+    return -1;
+}
 
 
 // ---------------------------- NOTHING ENABLED BELOW ---------------------------

@@ -14,6 +14,12 @@ class Preferences;
 #include "pa_ringbuffer.h"
 #include "sndfile.h"
 
+int availableOutputDeviceIDs(QVector<int> &);
+int defaultOutputDevice();
+int deviceIDFromName(const QString &);
+int deviceNameFromID(const int, QString &);
+int maxOutputChannelCount(const int);
+int availableSamplingRates(const int, const int, QVector<int> &);
 
 class Audio : public QObject
 {

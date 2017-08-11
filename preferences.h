@@ -8,7 +8,9 @@
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
+class QComboBox;
 class QDialogButtonBox;
+class QSpinBox;
 class QTabWidget;
 QT_END_NAMESPACE
 class Preferences;
@@ -45,6 +47,19 @@ class AudioTab : public QWidget
 
 public:
     explicit AudioTab(QWidget *parent = 0);
+
+private slots:
+    void conformValuesToSelectedDevice(int);
+
+private:
+    void initDeviceMenus();
+
+    QComboBox *outDeviceMenu;
+    QComboBox *samplingRateMenu;
+    QSpinBox *outChannelsSpin;
+    QComboBox *bufferSizeMenu;
+    QSpinBox *numBusesSpin;
+    QVector<int> outputDeviceList;
 };
 
 
