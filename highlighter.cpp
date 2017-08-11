@@ -98,7 +98,7 @@ Highlighter::Highlighter(QTextDocument *parent)
     rule.format = invalidFuncsFormat;
     rule.pattern = QRegularExpression("\\s*rtsetparams\\s*\\(.*\\).*");
     highlightingRules.append(rule);
-    qDebug() << "rule.pattern" << rule.pattern;
+//    qDebug() << "rule.pattern" << rule.pattern;
     rule.pattern = QRegularExpression("\\s*rtoutput\\s*\\(.*\\).*");
     highlightingRules.append(rule);
     rule.pattern = QRegularExpression("\\s*load\\s*\\(.*\\).*");
