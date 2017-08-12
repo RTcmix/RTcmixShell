@@ -56,6 +56,7 @@
 Highlighter::Highlighter(QTextDocument *parent)
     : QSyntaxHighlighter(parent)
 {
+    // This syncs with the MainWindow-owned settings, even though it's a different object.
     syntaxHighlightingPreferences = new Preferences();
 
     HighlightingRule rule;

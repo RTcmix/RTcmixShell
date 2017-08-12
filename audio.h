@@ -63,7 +63,6 @@ private:
     int outputUnderflowCount;
 
     // sync these with prefs dlog
-    Preferences *audioPreferences;
     int inputDeviceID;
     int outputDeviceID;
     float samplingRate;
@@ -78,6 +77,8 @@ private:
     float *transferBuffer;
     RecordThreadController *recordThreadController;
     std::atomic<bool> nowRecording;
+
+    Preferences *audioPreferences;
 
 #ifdef NOTYET   // should move to main window
     // Owned by layout

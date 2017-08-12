@@ -8,6 +8,7 @@ class QString;
 class QWidget;
 QT_END_NAMESPACE
 class MainWindow;
+class Preferences;
 
 class Editor : public QTextEdit
 {
@@ -28,6 +29,8 @@ private slots:
 
 private:
     MainWindow *parent;
+
+    Preferences *editorPreferences;
 
 signals:
     void loadFile(QString &);

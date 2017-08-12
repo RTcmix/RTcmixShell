@@ -73,7 +73,6 @@ private:
     Audio *audio;
     Editor *curEditor;
     RTcmixLogView *rtcmixLogView;
-    Preferences *mainWindowPreferences;
     QSplitter *splitter;
     QString fileName;
     QAction *actionNewFile;
@@ -110,6 +109,8 @@ private:
     bool playing;
     bool recording;
     bool firstFileDialog;
+
+    Preferences *mainWindowPreferences;
 };
 
 #endif // MAINWINDOW_H

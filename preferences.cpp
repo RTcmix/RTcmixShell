@@ -16,40 +16,27 @@ const int maxNumBuses = 96;
 #ifdef GENERALTAB
 GeneralTab::GeneralTab(QWidget *parent) : QWidget(parent)
 {
-
 }
+
+void GeneralTab::initFromPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
+void GeneralTab::writeToPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
 #endif
 
-EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
-{
-/* Layout:
-    Font:                    Size:
-    Tab width: [QSpinBox: 1-8]
-    Log Font Size:
-    (font and size combo boxes as in current toolbar)
-*/
-}
 
-SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent) : QWidget(parent)
-{
-/*  QHBoxLayout:
-       [x] Enable Syntax Highlighting
-
-    QGridLayout:
-        Reserved words  [swatch]
-        Numbers         [swatch]
-        Strings         [swatch]
-        Functions       [swatch]
-        Unused commands [swatch]
-        Comments        [swatch]
-     (clicking swatches invokes QColorDialog
-      for swatch, see answer by jpo38:
-      https://stackoverflow.com/questions/18257281/qt-color-picker-widget )
-*/
-}
+//-------------------------------------------------------------------------------
 
 AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 {
+    initing = true;
+
 /* QGridLayout:
     Output Device:   [popup menu: names from portaudio]
     Sampling Rate:   [popup menu: e.g., 22050, 44100, 48000, 88200, 96000]
@@ -66,7 +53,7 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     QLabel *outDeviceLabel = new QLabel(tr("Output Device:"));
     outDeviceMenu = new QComboBox();
     initDeviceMenus();
-    CHECKED_CONNECT(outDeviceMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AudioTab::conformValuesToSelectedDevice);
+    CHECKED_CONNECT(outDeviceMenu, QOverload<int>::of(&QComboBox::activated), this, &AudioTab::conformValuesToSelectedDevice);
 
     QLabel *samplingRateLabel = new QLabel(tr("Sampling Rate:"));
     samplingRateMenu = new QComboBox();
@@ -93,6 +80,86 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     mainLayout->addWidget(numBusesLabel, 4, 0);
     mainLayout->addWidget(numBusesSpin, 4, 1);
     setLayout(mainLayout);
+}
+
+void AudioTab::initFromPreferences(Preferences *prefs)
+{
+    // output device
+    int deviceID = prefs->audioOutputDeviceID();
+    QString str;
+    int index = 0;
+    int result = deviceNameFromID(deviceID, str);
+    if (result == 0) {
+        int idx = outDeviceMenu->findText(str);
+        if (idx != -1)
+            index = idx;
+    }
+    outDeviceMenu->setCurrentIndex(index);
+    deviceID = deviceIDFromName(outDeviceMenu->currentText()); // could've been overridden
+
+    // output channels
+    int numChans = prefs->audioNumOutputChannels();
+    outChannelsSpin->setValue(numChans);
+    outChannelsSpin->selectAll();
+
+    // sampling rate
+    QVector<int> samplingRates;
+    int count = availableSamplingRates(deviceID, numChans, samplingRates);
+    if (count > 0) {
+        samplingRateMenu->clear();
+        for (int i = 0; i < samplingRates.size(); i++) {
+            QString s = QString::number(samplingRates.at(i));
+            samplingRateMenu->addItem(s);
+        }
+    }
+    else
+        qDebug("init: no valid sampling rates for this device (%d chans)", numChans);
+    str = QString::number(prefs->audioSamplingRate());
+    index = samplingRateMenu->findText(str);
+    samplingRateMenu->setCurrentIndex(index);
+
+    // buffer size
+    QVector<int> bufferSizes;
+    count = availableBufferSizes(deviceID, bufferSizes);
+    if (count > 0) {
+        bufferSizeMenu->clear();
+        for (int i = 0; i < bufferSizes.size(); i++) {
+            QString s = QString::number(bufferSizes.at(i));
+            bufferSizeMenu->addItem(s);
+        }
+    }
+    else
+        qDebug("init: no valid buffer sizes for this device");
+    str = QString::number(prefs->audioBufferSize());
+    index = bufferSizeMenu->findText(str);
+    bufferSizeMenu->setCurrentIndex(index);
+
+    // buses
+    numBusesSpin->setValue(prefs->audioNumBuses());
+
+//    prefs->audioShowOverlappingScoresWarning();
+
+    initing = false;
+}
+
+void AudioTab::writeToPreferences(Preferences *prefs)
+{
+    int curVal = deviceIDFromName(outDeviceMenu->currentText());
+    prefs->setAudioOutputDeviceID(curVal);
+
+    QString str = samplingRateMenu->currentText();
+    prefs->setAudioSamplingRate(str.toInt());
+
+    curVal = outChannelsSpin->value();
+    prefs->setAudioNumOutputChannels(curVal);
+
+    str = bufferSizeMenu->currentText();
+    prefs->setAudioBufferSize(str.toInt());
+
+    curVal = numBusesSpin->value();
+    prefs->setAudioNumBuses(curVal);
+
+//    prefs->setAudioShowOverlappingScoresWarning();
 }
 
 // Create the input and output device menus.
@@ -164,16 +231,80 @@ void AudioTab::conformValuesToSelectedDevice(int outputDeviceMenuID)
         qDebug("conform: no valid buffer sizes for this device");
 }
 
+
+//-------------------------------------------------------------------------------
+
+EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
+{
+/* Layout:
+    Font:                    Size:
+    Tab width: [QSpinBox: 1-8]
+    Log Font Size:
+    (font and size combo boxes as in current toolbar)
+*/
+}
+
+void EditorTab::initFromPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
+void EditorTab::writeToPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
+
+//-------------------------------------------------------------------------------
+
+SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent) : QWidget(parent)
+{
+/*  QHBoxLayout:
+       [x] Enable Syntax Highlighting
+
+    QGridLayout:
+        Reserved words  [swatch]
+        Numbers         [swatch]
+        Strings         [swatch]
+        Functions       [swatch]
+        Unused commands [swatch]
+        Comments        [swatch]
+     (clicking swatches invokes QColorDialog
+      for swatch, see answer by jpo38:
+      https://stackoverflow.com/questions/18257281/qt-color-picker-widget )
+*/
+}
+
+void SyntaxHighlightingTab::initFromPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
+void SyntaxHighlightingTab::writeToPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
+
+//-------------------------------------------------------------------------------
+
 PreferencesDialog::PreferencesDialog(QWidget *parent)
     : QDialog(parent)
 {
     tabWidget = new QTabWidget;
 #ifdef GENERALTAB
-    tabWidget->addTab(new GeneralTab(), tr("General"));
+    generalTab = new GeneralTab();
 #endif
-    tabWidget->addTab(new EditorTab(), tr("Editor"));
-    tabWidget->addTab(new SyntaxHighlightingTab(), tr("Syntax Highlighting"));
-    tabWidget->addTab(new AudioTab(), tr("Audio"));
+    audioTab = new AudioTab();
+    editorTab = new EditorTab();
+    syntaxHighlightingTab = new SyntaxHighlightingTab();
+
+#ifdef GENERALTAB
+    tabWidget->addTab(generalTab, tr("General"));
+#endif
+    tabWidget->addTab(audioTab, tr("Audio"));
+    tabWidget->addTab(editorTab, tr("Editor"));
+    tabWidget->addTab(syntaxHighlightingTab, tr("Syntax Highlighting"));
 
     okCancelButtonBox = new QDialogButtonBox(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
     CHECKED_CONNECT(okCancelButtonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
@@ -189,11 +320,23 @@ PreferencesDialog::PreferencesDialog(QWidget *parent)
 
 void PreferencesDialog::initFromPreferences(Preferences *prefs)
 {
-
+#ifdef GENERALTAB
+    generalTab->initFromPreferences(prefs);
+#endif
+    audioTab->initFromPreferences(prefs);
+    editorTab->initFromPreferences(prefs);
+    syntaxHighlightingTab->initFromPreferences(prefs);
 }
 
-void PreferencesDialog::applyPreferences(Preferences *prefs)
+void PreferencesDialog::writeToPreferences(Preferences *prefs)
 {
+#ifdef GENERALTAB
+    generalTab->writeToPreferences(prefs);
+#endif
+    audioTab->writeToPreferences(prefs);
+    editorTab->writeToPreferences(prefs);
+    syntaxHighlightingTab->writeToPreferences(prefs);
+
 #ifdef NOTYET
     // need signals/slots to force update of these params in other modules
 
@@ -208,21 +351,11 @@ void PreferencesDialog::applyPreferences(Preferences *prefs)
     // Syntax Highlighting tab
     prefs->setEditorDoSyntaxHighlighting();
     // add support for changing colors
-
-    // Audio tab
-    // prefs->setAudioInputDeviceID();
-    prefs->setAudioOutputDeviceID();
-    prefs->setAudioSamplingRate();
-    // prefs->setAudioNumInputChannels();
-    prefs->setAudioNumOutputChannels();
-    prefs->setAudioBufferSize();
-    prefs->setAudioNumBuses();
-    prefs->setAudioShowOverlappingScoresWarning();
 #endif
 }
 
 
-//-------------------------------------------------------------------------------
+//===============================================================================
 
 Preferences::Preferences()
 {
@@ -243,7 +376,7 @@ void Preferences::showPreferencesDialog()
     dlog.initFromPreferences(this);
     int result = dlog.exec();     // modal
     if (result == QDialog::Accepted)
-        dlog.applyPreferences(this);
+        dlog.writeToPreferences(this);
 }
 
 void Preferences::reportError()

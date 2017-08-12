@@ -454,13 +454,14 @@ int availableSamplingRates(const int deviceID, const int numOutputChannels, QVec
     return count;
 }
 
-
 // Return number of available buffer sizes, if any, that are valid for the
 // given device ID. Pass back QVector of valid buffer sizes, which is owned by caller.
 // FIXME: doesn't appear possible in PortAudio, outside of ASIO devices.
 // The only way to get this is to try opening a stream and see if it fails.
 int availableBufferSizes(const int deviceID, QVector<int> &sizes)
 {
+    Q_UNUSED(deviceID);
+
     static int standardBufferSizes[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096, -1 };
     int count = 0;
     for (int i = 0; standardBufferSizes[i] > 0; i++) {

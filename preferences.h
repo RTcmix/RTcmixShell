@@ -22,24 +22,10 @@ class GeneralTab : public QWidget
 
 public:
     explicit GeneralTab(QWidget *parent = 0);
+    void initFromPreferences(Preferences *);
+    void writeToPreferences(Preferences *);
 };
 #endif
-
-class EditorTab : public QWidget
-{
-    Q_OBJECT
-
-public:
-    explicit EditorTab(QWidget *parent = 0);
-};
-
-class SyntaxHighlightingTab : public QWidget
-{
-    Q_OBJECT
-
-public:
-    explicit SyntaxHighlightingTab(QWidget *parent = 0);
-};
 
 class AudioTab : public QWidget
 {
@@ -47,6 +33,8 @@ class AudioTab : public QWidget
 
 public:
     explicit AudioTab(QWidget *parent = 0);
+    void initFromPreferences(Preferences *);
+    void writeToPreferences(Preferences *);
 
 private slots:
     void conformValuesToSelectedDevice(int);
@@ -60,6 +48,27 @@ private:
     QComboBox *bufferSizeMenu;
     QSpinBox *numBusesSpin;
     QVector<int> outputDeviceList;
+    bool initing;
+};
+
+class EditorTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit EditorTab(QWidget *parent = 0);
+    void initFromPreferences(Preferences *);
+    void writeToPreferences(Preferences *);
+};
+
+class SyntaxHighlightingTab : public QWidget
+{
+    Q_OBJECT
+
+public:
+    explicit SyntaxHighlightingTab(QWidget *parent = 0);
+    void initFromPreferences(Preferences *);
+    void writeToPreferences(Preferences *);
 };
 
 
@@ -70,10 +79,16 @@ class PreferencesDialog : public QDialog
 public:
     explicit PreferencesDialog(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void applyPreferences(Preferences *);
+    void writeToPreferences(Preferences *);
 
 private:
     QTabWidget *tabWidget;
+#ifdef GENERALTAB
+    GeneralTab *generalTab;
+#endif
+    AudioTab *audioTab;
+    EditorTab *editorTab;
+    SyntaxHighlightingTab *syntaxHighlightingTab;
     QDialogButtonBox *okCancelButtonBox;
 };
 

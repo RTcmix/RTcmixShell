@@ -6,10 +6,14 @@
 #include "editor.h"
 #include "highlighter.h"
 #include "mainwindow.h"
+#include "preferences.h"
 #include "utils.h"
 
 Editor::Editor(MainWindow *parent) : QTextEdit(parent), parent(parent)
 {
+    // This syncs with the MainWindow-owned settings, even though it's a different object.
+    editorPreferences = new Preferences();
+
     Highlighter *h = new Highlighter(document());
     Q_UNUSED(h);
 
