@@ -18,6 +18,6 @@ QT_END_NAMESPACE
     if (!connect(source, signal, receiver, slot)) \
         qt_assert_x(Q_FUNC_INFO, "CHECKED_CONNECT failed", __FILE__, __LINE__);
 
-MainWindow *getMainWindow(QWidget *);
+MainWindow *getMainWindow();
 
 #endif // UTILS_H

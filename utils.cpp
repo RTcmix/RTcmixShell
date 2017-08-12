@@ -4,7 +4,7 @@
 #include "mainwindow.h"
 #include "utils.h"
 
-MainWindow *getMainWindow(QWidget *widget)
+MainWindow *getMainWindow()
 {
     foreach (QWidget *widget, QApplication::topLevelWidgets()) {
         QString name = widget->objectName();

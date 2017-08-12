@@ -184,7 +184,7 @@ void AudioTab::applyPreferences(Preferences *prefs)
     prefs->setAudioShowOverlappingScoresWarning(warnOverlappingScores->isChecked());
 
     if (changed) {
-        MainWindow *mw = getMainWindow(this);
+        MainWindow *mw = getMainWindow();
         if (mw)
             mw->reinitializeAudio();
     }
