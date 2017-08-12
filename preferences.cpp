@@ -3,6 +3,7 @@
 #include <QtDebug>
 
 #include "audio.h"
+#include "mainwindow.h"
 #include "preferences.h"
 #include "utils.h"
 
@@ -23,7 +24,7 @@ void GeneralTab::initFromPreferences(Preferences *prefs)
     Q_UNUSED(prefs);
 }
 
-void GeneralTab::writeToPreferences(Preferences *prefs)
+void GeneralTab::applyPreferences(Preferences *prefs)
 {
     Q_UNUSED(prefs);
 }
@@ -68,6 +69,8 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     numBusesSpin = new QSpinBox();
     numBusesSpin->setRange(minNumBuses, maxNumBuses);
 
+    warnOverlappingScores = new QCheckBox(tr("Warn when choosing Allow Overlapping Scores"));
+
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->addWidget(outDeviceLabel, 0, 0);
     mainLayout->addWidget(outDeviceMenu, 0, 1);
@@ -79,6 +82,7 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     mainLayout->addWidget(bufferSizeMenu, 3, 1);
     mainLayout->addWidget(numBusesLabel, 4, 0);
     mainLayout->addWidget(numBusesSpin, 4, 1);
+    mainLayout->addWidget(warnOverlappingScores, 5, 0, 1, 2);
     setLayout(mainLayout);
 }
 
@@ -137,29 +141,53 @@ void AudioTab::initFromPreferences(Preferences *prefs)
     // buses
     numBusesSpin->setValue(prefs->audioNumBuses());
 
-//    prefs->audioShowOverlappingScoresWarning();
+    // overlapping scores warning alert
+    warnOverlappingScores->setChecked(prefs->audioShowOverlappingScoresWarning());
 
     initing = false;
 }
 
-void AudioTab::writeToPreferences(Preferences *prefs)
+void AudioTab::applyPreferences(Preferences *prefs)
 {
-    int curVal = deviceIDFromName(outDeviceMenu->currentText());
-    prefs->setAudioOutputDeviceID(curVal);
+    bool changed = false;
 
-    QString str = samplingRateMenu->currentText();
-    prefs->setAudioSamplingRate(str.toInt());
+    int oldVal = prefs->audioOutputDeviceID();
+    int newVal = deviceIDFromName(outDeviceMenu->currentText());
+    prefs->setAudioOutputDeviceID(newVal);
+    if (newVal != oldVal)
+        changed = true;
 
-    curVal = outChannelsSpin->value();
-    prefs->setAudioNumOutputChannels(curVal);
+    oldVal = prefs->audioSamplingRate();
+    newVal = samplingRateMenu->currentText().toInt();
+    prefs->setAudioSamplingRate(newVal);
+    if (newVal != oldVal)
+        changed = true;
 
-    str = bufferSizeMenu->currentText();
-    prefs->setAudioBufferSize(str.toInt());
+    oldVal = prefs->audioNumOutputChannels();
+    newVal = outChannelsSpin->value();
+    prefs->setAudioNumOutputChannels(newVal);
+    if (newVal != oldVal)
+        changed = true;
 
-    curVal = numBusesSpin->value();
-    prefs->setAudioNumBuses(curVal);
+    oldVal = prefs->audioBufferSize();
+    newVal = bufferSizeMenu->currentText().toInt();
+    prefs->setAudioBufferSize(newVal);
+    if (newVal != oldVal)
+        changed = true;
 
-//    prefs->setAudioShowOverlappingScoresWarning();
+    oldVal = prefs->audioNumBuses();
+    newVal = numBusesSpin->value();
+    prefs->setAudioNumBuses(newVal);
+    if (newVal != oldVal)
+        changed = true;
+
+    prefs->setAudioShowOverlappingScoresWarning(warnOverlappingScores->isChecked());
+
+    if (changed) {
+        MainWindow *mw = getMainWindow(this);
+        if (mw)
+            mw->reinitializeAudio();
+    }
 }
 
 // Create the input and output device menus.
@@ -249,7 +277,7 @@ void EditorTab::initFromPreferences(Preferences *prefs)
     Q_UNUSED(prefs);
 }
 
-void EditorTab::writeToPreferences(Preferences *prefs)
+void EditorTab::applyPreferences(Preferences *prefs)
 {
     Q_UNUSED(prefs);
 }
@@ -280,7 +308,7 @@ void SyntaxHighlightingTab::initFromPreferences(Preferences *prefs)
     Q_UNUSED(prefs);
 }
 
-void SyntaxHighlightingTab::writeToPreferences(Preferences *prefs)
+void SyntaxHighlightingTab::applyPreferences(Preferences *prefs)
 {
     Q_UNUSED(prefs);
 }
@@ -328,14 +356,14 @@ void PreferencesDialog::initFromPreferences(Preferences *prefs)
     syntaxHighlightingTab->initFromPreferences(prefs);
 }
 
-void PreferencesDialog::writeToPreferences(Preferences *prefs)
+void PreferencesDialog::applyPreferences(Preferences *prefs)
 {
 #ifdef GENERALTAB
-    generalTab->writeToPreferences(prefs);
+    generalTab->applyPreferences(prefs);
 #endif
-    audioTab->writeToPreferences(prefs);
-    editorTab->writeToPreferences(prefs);
-    syntaxHighlightingTab->writeToPreferences(prefs);
+    audioTab->applyPreferences(prefs);
+    editorTab->applyPreferences(prefs);
+    syntaxHighlightingTab->applyPreferences(prefs);
 
 #ifdef NOTYET
     // need signals/slots to force update of these params in other modules
@@ -375,8 +403,9 @@ void Preferences::showPreferencesDialog()
     PreferencesDialog dlog;
     dlog.initFromPreferences(this);
     int result = dlog.exec();     // modal
-    if (result == QDialog::Accepted)
-        dlog.writeToPreferences(this);
+    if (result == QDialog::Accepted) {
+        dlog.applyPreferences(this);
+    }
 }
 
 void Preferences::reportError()

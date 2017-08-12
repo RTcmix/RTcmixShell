@@ -28,6 +28,7 @@ MainWindow::MainWindow(QWidget *parent)
     , recording(false)
     , firstFileDialog(true)
 {
+    this->setObjectName("MainWindow");  // so we can be found by utils.h: getMainWindow()
 #ifdef Q_OS_OSX
     setUnifiedTitleAndToolBarOnMac(true);
 #endif
@@ -522,6 +523,18 @@ void MainWindow::checkScoreFinished()
 void MainWindow::setScorePlayMode()
 {
     if (actionAllowOverlappingScores->isChecked()) {
+        if (mainWindowPreferences->audioShowOverlappingScoresWarning()) {
+            QMessageBox msgBox;
+            msgBox.setText(tr("Playing scores simultaneously can be unstable. "
+                           "Be careful: save your score and your ears!"));
+            msgBox.setIcon(QMessageBox::Warning);
+            msgBox.setStandardButtons(QMessageBox::Ok);
+            msgBox.addButton("Stop warning me", QMessageBox::DestructiveRole);
+            msgBox.setDefaultButton(QMessageBox::Ok);
+            int result = msgBox.exec();
+            if (result == 0)
+                mainWindowPreferences->setAudioShowOverlappingScoresWarning(false);
+        }
         scorePlayMode = Overlapping;
         // we do not disable the score-finished callback, in case
         // other useful information gets there in the future
@@ -602,7 +615,7 @@ Q_UNUSED(level);
 #endif
 }
 
-void MainWindow::stopScore()
+void MainWindow::stopScoreNoReinit()
 {
     if (recording) {
         audio->stopRecording();
@@ -610,17 +623,31 @@ void MainWindow::stopScore()
         recordButton->setEnabled(true);
         recording = false;
     }
-    xableScoreActions(false);
-    scoreFinishedTimer->stop();
-    playing = false;
+    if (playing) {
+        xableScoreActions(false);
+        scoreFinishedTimer->stop();
+        playing = false;
+    }
     rtcmixLogView->stopLog();
     setScorePrintLevel(0);
+}
+
+void MainWindow::stopScore()
+{
+    stopScoreNoReinit();
 //#define FLUSH_SCORE_ON_STOP
 #ifdef FLUSH_SCORE_ON_STOP
     RTcmix_flushScore();
 #else
-    audio->reInitializeRTcmix();
+    audio->reinitializeRTcmix();
 #endif
+}
+
+void MainWindow::reinitializeAudio()
+{
+    stopScoreNoReinit();
+    delete audio;
+    audio = new Audio;
 }
 
 bool MainWindow::chooseRecordFilename(QString &fileName)

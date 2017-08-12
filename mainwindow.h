@@ -27,10 +27,15 @@ public:
     explicit MainWindow(QWidget *parent = nullptr);
     void fileNew();
     bool loadFile(const QString &);
+    void reinitializeAudio();
+
     bool scoreFinished;
 
 protected:
     void closeEvent(QCloseEvent *e) override;
+
+public slots:
+    void stopScore();
 
 private slots:
     void about();
@@ -38,7 +43,6 @@ private slots:
     bool fileSave();
     bool fileSaveAs();
     void playScore();
-    void stopScore();
     void record();
     void textFamily(const QString &);
     void textSize(const QString &);
@@ -64,6 +68,7 @@ private:
     void setTabStops();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
+    void stopScoreNoReinit();
     void sendScoreFragment(char *);
     bool chooseRecordFilename(QString &);
     void loadSettings();

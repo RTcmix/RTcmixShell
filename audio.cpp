@@ -117,37 +117,45 @@ int Audio::initializeAudio()
     }
     portAudioInitialized = true;
 
-#ifdef NOTYET // determine whether what we want is available; should be in loop?
-    PaStreamParameters inputParameters, outputParameters;
+#ifdef NOTYET
+    PaStreamParameters inputParameters;
     bzero(&inputParameters, sizeof(inputParameters));
     inputParameters.channelCount = numInChannels;
     inputParameters.device = inputDeviceID;
     inputParameters.sampleFormat = paFloat32;
+#endif
+    PaStreamParameters outputParameters;
     bzero(&outputParameters, sizeof(outputParameters));
     outputParameters.channelCount = numOutChannels;
     outputParameters.device = outputDeviceID;
     outputParameters.sampleFormat = paFloat32;
-    err = Pa_IsFormatSupported(inputParameters, outputParameters, samplingRate);
-    if (err != paFormatIsSupported) {}
-    // then you would open stream. See http://portaudio.com/docs/v19-doxydocs/querying_devices.html
-#endif
-
-    // TODO: pick requested values up from prefs, incl. device choice, using Pa_OpenStream instead of Pa_OpenDefaultStream
-    err = Pa_OpenDefaultStream(&stream,
-                               numInChannels,
-                               numOutChannels,
-                               paFloat32,
-                               samplingRate,
-                               bufferSize,
-                               &paCallback,
-                               this);
+    err = Pa_IsFormatSupported(NULL /* &inputParameters */, &outputParameters, samplingRate);
+    if (err == paFormatIsSupported) {
+        err = Pa_OpenStream(&stream,
+                            NULL /* &inputParameters */,
+                            &outputParameters,
+                            samplingRate,
+                            bufferSize,
+                            paClipOff | paDitherOff,  // clipping happens inside RTcmix
+                            &paCallback,
+                            this);
+    }
+    else {
+        err = Pa_OpenDefaultStream(&stream,
+                                   numInChannels,
+                                   numOutChannels,
+                                   paFloat32,
+                                   samplingRate,
+                                   bufferSize,
+                                   &paCallback,
+                                   this);
+    }
     if (err != paNoError) {
-        qWarning("Pa_OpenDefaultStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+        qWarning("Error opening audio device: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
         return -1;
     }
 
-    // FIXME: should be checking to see what the actual srate and buffersize are, etc.
-
+#ifdef NOTNOW
     // FIXME: not sure we should do it this way
     audioPreferences->setAudioInputDeviceID(inputDeviceID);
     audioPreferences->setAudioOutputDeviceID(outputDeviceID);
@@ -156,12 +164,13 @@ int Audio::initializeAudio()
     audioPreferences->setAudioNumOutputChannels(numOutChannels);
     audioPreferences->setAudioBufferSize(bufferSize);
     audioPreferences->setAudioNumBuses(busCount);
+#endif
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
     transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 
-    qDebug("Audio initialized");
+    qDebug("Audio initialized (srate=%d, nchans=%d, bufsize=%d)", int(samplingRate), numOutChannels, bufferSize);
     return 0;
 }
 
@@ -289,7 +298,7 @@ int Audio::initializeRTcmix()
     return 0;
 }
 
-int Audio::reInitializeRTcmix()
+int Audio::reinitializeRTcmix()
 {
     if (rtcmixInitialized) {
         stopAudio();

@@ -8,6 +8,7 @@
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
+class QCheckBox;
 class QComboBox;
 class QDialogButtonBox;
 class QSpinBox;
@@ -23,7 +24,7 @@ class GeneralTab : public QWidget
 public:
     explicit GeneralTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void writeToPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 };
 #endif
 
@@ -34,7 +35,7 @@ class AudioTab : public QWidget
 public:
     explicit AudioTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void writeToPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 
 private slots:
     void conformValuesToSelectedDevice(int);
@@ -47,6 +48,7 @@ private:
     QSpinBox *outChannelsSpin;
     QComboBox *bufferSizeMenu;
     QSpinBox *numBusesSpin;
+    QCheckBox *warnOverlappingScores;
     QVector<int> outputDeviceList;
     bool initing;
 };
@@ -58,7 +60,7 @@ class EditorTab : public QWidget
 public:
     explicit EditorTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void writeToPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 };
 
 class SyntaxHighlightingTab : public QWidget
@@ -68,7 +70,7 @@ class SyntaxHighlightingTab : public QWidget
 public:
     explicit SyntaxHighlightingTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void writeToPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 };
 
 
@@ -79,7 +81,7 @@ class PreferencesDialog : public QDialog
 public:
     explicit PreferencesDialog(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
-    void writeToPreferences(Preferences *);
+    void applyPreferences(Preferences *);
 
 private:
     QTabWidget *tabWidget;

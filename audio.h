@@ -29,7 +29,7 @@ class Audio : public QObject
 public:
     Audio();
     ~Audio();
-    int reInitializeRTcmix();
+    int reinitializeRTcmix();
     bool startRecording(const QString &);
     void stopRecording();
 

@@ -26,7 +26,8 @@ SOURCES         = audio.cpp \
                   pa_ringbuffer.c \
                   preferences.cpp \
                   record.cpp \
-                  rtcmixlogview.cpp
+                  rtcmixlogview.cpp \
+                  utils.cpp
 
 RESOURCES += RTcmixShell.qrc
 
