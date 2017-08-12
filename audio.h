@@ -20,6 +20,7 @@ int deviceIDFromName(const QString &);
 int deviceNameFromID(const int, QString &);
 int maxOutputChannelCount(const int);
 int availableSamplingRates(const int, const int, QVector<int> &);
+int availableBufferSizes(const int, QVector<int> &);
 
 class Audio : public QObject
 {
@@ -68,7 +69,7 @@ private:
     float samplingRate;
     int numInChannels;
     int numOutChannels;
-    int blockSize;
+    int bufferSize;
     int busCount;
 
     PaUtilRingBuffer recordRingBuffer;

@@ -1,3 +1,4 @@
+#include <QList>
 #include <QtWidgets>
 #include <QtDebug>
 
@@ -65,7 +66,7 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     QLabel *outDeviceLabel = new QLabel(tr("Output Device:"));
     outDeviceMenu = new QComboBox();
     initDeviceMenus();
-    CHECKED_CONNECT(outDeviceMenu, SIGNAL(currentIndexChanged(int)), this, SLOT(conformValuesToSelectedDevice(int)));
+    CHECKED_CONNECT(outDeviceMenu, QOverload<int>::of(&QComboBox::currentIndexChanged), this, &AudioTab::conformValuesToSelectedDevice);
 
     QLabel *samplingRateLabel = new QLabel(tr("Sampling Rate:"));
     samplingRateMenu = new QComboBox();
@@ -112,9 +113,55 @@ void AudioTab::initDeviceMenus()
 // of the selected device.
 void AudioTab::conformValuesToSelectedDevice(int outputDeviceMenuID)
 {
-    outDeviceMenu->currentText();
-    outChannelsSpin->setRange(1, 2);
-    outChannelsSpin->setValue(2);
+    // Set the popup menu to show the menu item just chosen.
+    outDeviceMenu->setCurrentIndex(outputDeviceMenuID);
+
+    // Get current output device ID, and set ranges of other items,
+    // and possibly selected items, to valid values.
+    int deviceID = deviceIDFromName(outDeviceMenu->currentText());
+
+    // Update number of channels
+    int maxChans = maxOutputChannelCount(deviceID);
+    int curVal = outChannelsSpin->value();
+    outChannelsSpin->setRange(1, maxChans);
+    outChannelsSpin->setValue(curVal);
+    int numChans = outChannelsSpin->value();  // value might have been constrained by widget
+
+    // Update sampling rate
+    QVector<int> samplingRates;
+    int count = availableSamplingRates(deviceID, numChans, samplingRates);
+    if (count > 0) {
+        QString curRate = samplingRateMenu->currentText();
+        samplingRateMenu->clear();
+        for (int i = 0; i < samplingRates.size(); i++) {
+            QString s = QString::number(samplingRates.at(i));
+            samplingRateMenu->addItem(s);
+        }
+        int index = samplingRateMenu->findText(curRate);
+        if (index == -1)
+            index = 0;
+        samplingRateMenu->setCurrentIndex(index);
+    }
+    else
+        qDebug("conform: no valid sampling rates for this device (%d chans)", numChans);
+
+    // Update buffer sizes
+    QVector<int> bufferSizes;
+    count = availableBufferSizes(deviceID, bufferSizes);
+    if (count > 0) {
+        QString curSize = bufferSizeMenu->currentText();
+        bufferSizeMenu->clear();
+        for (int i = 0; i < bufferSizes.size(); i++) {
+            QString s = QString::number(bufferSizes.at(i));
+            bufferSizeMenu->addItem(s);
+        }
+        int index = bufferSizeMenu->findText(curSize);
+        if (index == -1)
+            index = 0;
+        bufferSizeMenu->setCurrentIndex(index);
+    }
+    else
+        qDebug("conform: no valid buffer sizes for this device");
 }
 
 PreferencesDialog::PreferencesDialog(QWidget *parent)
@@ -140,6 +187,11 @@ PreferencesDialog::PreferencesDialog(QWidget *parent)
     setWindowTitle(tr("RTcmixShell Preferences"));
 }
 
+void PreferencesDialog::initFromPreferences(Preferences *prefs)
+{
+
+}
+
 void PreferencesDialog::applyPreferences(Preferences *prefs)
 {
 #ifdef NOTYET
@@ -163,7 +215,7 @@ void PreferencesDialog::applyPreferences(Preferences *prefs)
     prefs->setAudioSamplingRate();
     // prefs->setAudioNumInputChannels();
     prefs->setAudioNumOutputChannels();
-    prefs->setAudioBlockSize();
+    prefs->setAudioBufferSize();
     prefs->setAudioNumBuses();
     prefs->setAudioShowOverlappingScoresWarning();
 #endif
@@ -188,6 +240,7 @@ void Preferences::savePreferences()
 void Preferences::showPreferencesDialog()
 {
     PreferencesDialog dlog;
+    dlog.initFromPreferences(this);
     int result = dlog.exec();     // modal
     if (result == QDialog::Accepted)
         dlog.applyPreferences(this);

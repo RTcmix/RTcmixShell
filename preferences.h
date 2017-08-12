@@ -69,6 +69,7 @@ class PreferencesDialog : public QDialog
 
 public:
     explicit PreferencesDialog(QWidget *parent = 0);
+    void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
 
 private:
@@ -140,8 +141,8 @@ public:
     int audioNumOutputChannels() { return settings->value("audio/numOutputChannels", 2).toInt(); }
     void setAudioNumOutputChannels(int numChans) { settings->setValue("audio/numOutputChannels", numChans); }
 
-    int audioBlockSize() { return settings->value("audio/blockSize", 512).toInt(); }
-    void setAudioBlockSize(int size) { settings->setValue("audio/blockSize", size); }
+    int audioBufferSize() { return settings->value("audio/blockSize", 512).toInt(); }
+    void setAudioBufferSize(int size) { settings->setValue("audio/blockSize", size); }
 
     int audioNumBuses() { return settings->value("audio/numBuses", 32).toInt(); }
     void setAudioNumBuses(int numBuses) { settings->setValue("audio/numBuses", numBuses); }
@@ -158,7 +159,6 @@ public slots:
     void showPreferencesDialog();
 
 private:
-    void applyPreferences();
     void reportError();
 
     QSettings *settings;

@@ -75,7 +75,7 @@ Audio::Audio()
     samplingRate = audioPreferences->audioSamplingRate();
     numInChannels = audioPreferences->audioNumInputChannels();
     numOutChannels = audioPreferences->audioNumOutputChannels();
-    blockSize = audioPreferences->audioBlockSize();
+    bufferSize = audioPreferences->audioBufferSize();
     busCount = audioPreferences->audioNumBuses();
 
     int result = initializeAudio();
@@ -138,7 +138,7 @@ int Audio::initializeAudio()
                                numOutChannels,
                                paFloat32,
                                samplingRate,
-                               blockSize,
+                               bufferSize,
                                &paCallback,
                                this);
     if (err != paNoError) {
@@ -146,7 +146,7 @@ int Audio::initializeAudio()
         return -1;
     }
 
-    // FIXME: should be checking to see what the actual srate and blocksize are, etc.
+    // FIXME: should be checking to see what the actual srate and buffersize are, etc.
 
     // FIXME: not sure we should do it this way
     audioPreferences->setAudioInputDeviceID(inputDeviceID);
@@ -154,7 +154,7 @@ int Audio::initializeAudio()
     audioPreferences->setAudioSamplingRate(samplingRate);
     audioPreferences->setAudioNumInputChannels(numInChannels);
     audioPreferences->setAudioNumOutputChannels(numOutChannels);
-    audioPreferences->setAudioBlockSize(blockSize);
+    audioPreferences->setAudioBufferSize(bufferSize);
     audioPreferences->setAudioNumBuses(busCount);
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
@@ -252,7 +252,7 @@ qDebug("audio callback: ring buffer write not available (1 time)");
         if (nonzero)
             qDebug("has sound");
         else
-            qDebug("20 blocks of silence");
+            qDebug("20 buffers of silence");
     }
 //    qDebug("RTcmix_runAudio called (result=%d, frameCount=%ld, output=%p)", result, frameCount, output);
 #endif
@@ -279,7 +279,7 @@ int Audio::initializeRTcmix()
 
     // TODO: handle input as well as output
     int takingInput = 0;
-    status = RTcmix_setparams(samplingRate, numOutChannels, blockSize, takingInput, busCount);
+    status = RTcmix_setparams(samplingRate, numOutChannels, bufferSize, takingInput, busCount);
     if (status != 0) {
         qWarning("RTcmix_setparams returned error (%d)", status);
         return -1;
@@ -398,7 +398,7 @@ int defaultOutputDevice()
     return -1;
 }
 
-int deviceIDFromName(const QString name)
+int deviceIDFromName(const QString &name)
 {
     const PaDeviceInfo *deviceInfo;
     int numDevices = Pa_GetDeviceCount();
@@ -430,33 +430,44 @@ int maxOutputChannelCount(const int deviceID)
     return deviceInfo->maxOutputChannels;
 }
 
-// Return number of available sampling rates that are valid for the given
-// device ID and output channel count. Return -1 if error. Pass back
-// QVector of valid sampling rates, which is owned by caller.
+// Return number of available sampling rates, if any, that are valid for the
+// given device ID and output channel count. Pass back QVector of valid
+// sampling rates, which is owned by caller.
+// NB: This gives us many rates as valid for the MOTU 1248 that probably aren't.
 int availableSamplingRates(const int deviceID, const int numOutputChannels, QVector<int> &rates)
 {
-    PaError err = paNoError;
     PaStreamParameters outParams;
     bzero(&outParams, sizeof(outParams));
     outParams.channelCount = numOutputChannels;
     outParams.device = deviceID;
     outParams.sampleFormat = paFloat32;
 
-    static int standardSamplingRates[] = { 22050, 44100, 48000, 88200, 96000, -1 };
+    static int standardSamplingRates[] = { 44100, 48000, 88200, 96000, 176400, 192000, -1 };
     int count = 0;
     for (int i = 0; standardSamplingRates[i] > 0; i++) {
-        err = Pa_IsFormatSupported(NULL, &outParams, standardSamplingRates[i]);
+        PaError err = Pa_IsFormatSupported(NULL, &outParams, standardSamplingRates[i]);
         if (err == paFormatIsSupported) {
             rates.append(standardSamplingRates[i]);
             count++;
-        }
-        else
-            goto error;
+        }   // we don't report an err, because the point is to exclude invalid rates silently
     }
     return count;
-error:
-    qWarning("availableSamplingRates: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
-    return -1;
+}
+
+
+// Return number of available buffer sizes, if any, that are valid for the
+// given device ID. Pass back QVector of valid buffer sizes, which is owned by caller.
+// FIXME: doesn't appear possible in PortAudio, outside of ASIO devices.
+// The only way to get this is to try opening a stream and see if it fails.
+int availableBufferSizes(const int deviceID, QVector<int> &sizes)
+{
+    static int standardBufferSizes[] = { 32, 64, 128, 256, 512, 1024, 2048, 4096, -1 };
+    int count = 0;
+    for (int i = 0; standardBufferSizes[i] > 0; i++) {
+        sizes.append(standardBufferSizes[i]);
+        count++;
+    }
+    return count;
 }
 
 
