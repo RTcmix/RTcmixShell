@@ -113,6 +113,7 @@ private:
     ScorePlayMode scorePlayMode;
     bool playing;
     bool recording;
+    bool reinitRTcmixOnPlay;
     bool firstFileDialog;
 
     Preferences *mainWindowPreferences;

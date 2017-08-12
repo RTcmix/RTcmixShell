@@ -26,6 +26,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , playing(false)
     , recording(false)
+    , reinitRTcmixOnPlay(false)
     , firstFileDialog(true)
 {
     this->setObjectName("MainWindow");  // so we can be found by utils.h: getMainWindow()
@@ -474,7 +475,7 @@ bool MainWindow::fileSave()
 
     QFile file(fileName);
     if (!file.open(QFile::WriteOnly | QFile::Text)) {
-        QMessageBox::warning(this, tr("Application"),
+        QMessageBox::warning(this, QCoreApplication::applicationName(),
                              tr("Could not write to file \"%1\":\n%2.")
                              .arg(QDir::toNativeSeparators(fileName),
                                   file.errorString()));
@@ -584,6 +585,10 @@ void MainWindow::playScore()
         return;
     const int len = strlen(buf);
     if (len) {
+        if (reinitRTcmixOnPlay) {   // recover from prev parse error
+            stopScore();
+            reinitRTcmixOnPlay = false;
+        }
         rtcmixLogView->startLog();
         setScorePrintLevel(5);
         rtcmixLogView->printLogSeparator(this->fileName);
@@ -593,7 +598,10 @@ void MainWindow::playScore()
             scoreFinishedTimer->start(scoreFinishedTimerInterval);
         playing = true;
         int result = RTcmix_parseScore(buf, len);
-        Q_UNUSED(result);
+        if (result) {                   // parse error
+            stopScoreNoReinit();        // no reinit, so we can see error in log
+            reinitRTcmixOnPlay = true;
+        }
     }
 //qDebug("invoked playScore(), buf len: %d, buffer...", len);
 //qDebug("%s", buf);
@@ -603,6 +611,7 @@ void MainWindow::sendScoreFragment(char *fragment)
 {
     int result = RTcmix_parseScore(fragment, strlen(fragment));
     Q_UNUSED(result);
+    // not sure we should stop anything in this case
 }
 
 void MainWindow::setScorePrintLevel(int level)
@@ -628,13 +637,13 @@ void MainWindow::stopScoreNoReinit()
         scoreFinishedTimer->stop();
         playing = false;
     }
-    rtcmixLogView->stopLog();
-    setScorePrintLevel(0);
 }
 
 void MainWindow::stopScore()
 {
     stopScoreNoReinit();
+    rtcmixLogView->stopLog();
+    setScorePrintLevel(0);
 //#define FLUSH_SCORE_ON_STOP
 #ifdef FLUSH_SCORE_ON_STOP
     RTcmix_flushScore();
