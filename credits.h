@@ -79,10 +79,4 @@
     "<p class=tight>&nbsp;</p>"
 
 
-/* potentially useful elements...
-    in style sheet: "p.spacer { margin-top: 0px; margin-bottom: 0; padding: 0; }" \
-    "<p class=spacer>&nbsp;</p>" \
-    "<tr><th width=20%></th><th></th></tr>" \
-*/
-
 #endif // CREDITS_H
