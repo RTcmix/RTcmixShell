@@ -376,7 +376,17 @@ void MainWindow::about()
     QString text = QCoreApplication::applicationVersion();
     text.prepend(tr("<h3>RTcmixShell "));
     text.append(tr("</h3>"
-                   "<p>John Gibson, Brad Garton, Doug Scott</p>"));
+                   "<p>John Gibson, Brad Garton, Doug Scott</p>"
+                   "<p>contributions to RTcmix by...</p><p>"
+                   "&nbsp; &nbsp; David Topper<br>"
+                   "&nbsp; &nbsp; Ivica Bukvic<br>"
+                   "&nbsp; &nbsp; R. Luke DuBois<br>"
+                   "&nbsp; &nbsp; Mara Helmuth<br>"
+                   "&nbsp; &nbsp; Joel Matthys<br>"
+                   "&nbsp; &nbsp; John Rhoads<br>"
+                   "&nbsp; &nbsp; Neil Thornock<br>"
+                   "</p>"
+    ));
     QMessageBox::about(this, tr("About"), text);
 }
 
