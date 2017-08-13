@@ -10,6 +10,7 @@
 #include "preferences.h"
 #include "RTcmix_API.h"
 #include "utils.h"
+#include "credits.h"
 
 #ifdef Q_OS_MAC
 const QString rsrcPath = ":/images/mac";
@@ -375,18 +376,7 @@ void MainWindow::about()
 {
     QString text = QCoreApplication::applicationVersion();
     text.prepend(tr("<h3>RTcmixShell "));
-    text.append(tr("</h3>"
-                   "<p>John Gibson, Brad Garton, Doug Scott</p>"
-                   "<p>contributions to RTcmix by...</p><p>"
-                   "&nbsp; &nbsp; David Topper<br>"
-                   "&nbsp; &nbsp; Ivica Bukvic<br>"
-                   "&nbsp; &nbsp; R. Luke DuBois<br>"
-                   "&nbsp; &nbsp; Mara Helmuth<br>"
-                   "&nbsp; &nbsp; Joel Matthys<br>"
-                   "&nbsp; &nbsp; John Rhoads<br>"
-                   "&nbsp; &nbsp; Neil Thornock<br>"
-                   "</p>"
-    ));
+    text.append(tr("</h3>" CREDITS));
     QMessageBox::about(this, tr("About"), text);
 }
 

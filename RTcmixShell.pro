@@ -5,6 +5,7 @@ TEMPLATE        = app
 TARGET          = RTcmixShell
 
 HEADERS         = audio.h \
+                  credits.h \
                   editor.h \
                   highlighter.h \
                   mainwindow.h \
