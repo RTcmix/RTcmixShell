@@ -11,7 +11,7 @@ class QMenu;
 class QPushButton;
 class QSettings;
 class QSplitter;
-class QTextEdit;
+class QPlainTextEdit;
 class QTimer;
 QT_END_NAMESPACE
 class Audio;
@@ -90,6 +90,7 @@ private:
     QAction *actionCut;
     QAction *actionCopy;
     QAction *actionPaste;
+    QAction *actionShowLineNumbers;
     QAction *actionPrefs;
     QAction *actionPlay;
     QAction *actionStop;

@@ -2,6 +2,7 @@
 #include <QFileInfo>
 #include <QMimeData>
 #include <QMimeDatabase>
+#include <QPainter>
 
 #include "editor.h"
 #include "highlighter.h"
@@ -9,19 +10,106 @@
 #include "preferences.h"
 #include "utils.h"
 
-Editor::Editor(MainWindow *parent) : QTextEdit(parent), parent(parent)
+
+Editor::Editor(MainWindow *parent) : QPlainTextEdit(parent), parent(parent)
 {
     // This syncs with the MainWindow-owned settings, even though it's a different object.
     editorPreferences = new Preferences();
 
+    showLineNumbers = editorPreferences->editorShowLineNumbers();
+
     Highlighter *h = new Highlighter(document());
     Q_UNUSED(h);
 
+    lineNumberArea = new LineNumberArea(this);
+
+    CHECKED_CONNECT(this, &Editor::blockCountChanged, this, &Editor::updateLineNumberAreaWidth);
+    CHECKED_CONNECT(this, &QPlainTextEdit::updateRequest, this, &Editor::updateLineNumberArea);
     CHECKED_CONNECT(document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
-    CHECKED_CONNECT(this, &QTextEdit::cursorPositionChanged, this, &Editor::cursorPositionChanged);
+    CHECKED_CONNECT(this, &QPlainTextEdit::cursorPositionChanged, this, &Editor::cursorPositionChanged);
     CHECKED_CONNECT(this, &Editor::loadFile, parent, &MainWindow::loadFile);
 
+    updateLineNumberAreaWidth(0);
+
     setAcceptDrops(true);
+}
+
+void Editor::xableLineNumbers(bool checked)
+{
+    showLineNumbers = checked;
+    editorPreferences->setEditorShowLineNumbers(checked);
+    emit blockCountChanged(0);
+}
+
+int Editor::lineNumberAreaWidth()
+{
+    int digits = 1;
+    int max = qMax(1, blockCount());
+    while (max >= 10) {
+        max /= 10;
+        digits++;
+    }
+    int space = 2 + (fontMetrics().width(QLatin1Char('9')) * (digits + 1));     // JG tweak
+
+    return space;
+}
+
+void Editor::updateLineNumberAreaWidth(int /* newBlockCount */)
+{
+    if (showLineNumbers)
+        setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+    else
+        setViewportMargins(0, 0, 0, 0);
+}
+
+void Editor::updateLineNumberArea(const QRect &rect, int dy)
+{
+    if (showLineNumbers) {
+        if (dy)
+            lineNumberArea->scroll(0, dy);
+        else
+            lineNumberArea->update(0, rect.y(), lineNumberArea->width(), rect.height());
+
+        if (rect.contains(viewport()->rect()))
+            updateLineNumberAreaWidth(0);
+    }
+}
+
+void Editor::resizeEvent(QResizeEvent *e)
+{
+    QPlainTextEdit::resizeEvent(e);
+
+    if (showLineNumbers) {
+        QRect cr = contentsRect();
+        lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
+    }
+}
+
+void Editor::lineNumberAreaPaintEvent(QPaintEvent *event)
+{
+    if (showLineNumbers) {
+        QPainter painter(lineNumberArea);
+        painter.fillRect(event->rect(), Qt::darkGray);
+
+        QTextBlock block = firstVisibleBlock();
+        int blockNumber = block.blockNumber();
+        int top = (int) blockBoundingGeometry(block).translated(contentOffset()).top();
+        int bottom = top + (int) blockBoundingRect(block).height();
+
+        while (block.isValid() && top <= event->rect().bottom()) {
+            if (block.isVisible() && bottom >= event->rect().top()) {
+                QString number = QString::number(blockNumber + 1);
+                painter.setPen(Qt::white);
+                int margin = fontMetrics().height() / 4;    // JG addition
+                painter.drawText(0, top, lineNumberArea->width() - margin, fontMetrics().height(), Qt::AlignRight, number);
+            }
+
+            block = block.next();
+            top = bottom;
+            bottom = top + (int) blockBoundingRect(block).height();
+            blockNumber++;
+        }
+    }
 }
 
 void Editor::dragEnterEvent(QDragEnterEvent *event)
@@ -80,7 +168,7 @@ void Editor::dropEvent(QDropEvent *event)
         // and unblinking. Found this in a post by "baohaojun" (5/5/17):
         // http://www.qtcentre.org/archive/index.php/t-16935.html
         this->setReadOnly(true);
-        QTextEdit::dropEvent(event);
+        QPlainTextEdit::dropEvent(event);
         this->setReadOnly(false);
     }
 }

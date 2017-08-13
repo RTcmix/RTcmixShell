@@ -118,35 +118,41 @@ void MainWindow::createEditActions()
     actionUndo->setShortcut(QKeySequence::Undo);
     actionUndo->setStatusTip(tr("Undo the last operation"));
     actionUndo->setEnabled(curEditor->document()->isUndoAvailable());
-    CHECKED_CONNECT(actionUndo, &QAction::triggered, curEditor, &QTextEdit::undo);
+    CHECKED_CONNECT(actionUndo, &QAction::triggered, curEditor, &QPlainTextEdit::undo);
     CHECKED_CONNECT(curEditor->document(), &QTextDocument::undoAvailable, actionUndo, &QAction::setEnabled);
 
     actionRedo = new QAction(tr("&Redo"), this);
     actionRedo->setShortcut(QKeySequence::Redo);
     actionRedo->setStatusTip(tr("Redo the last operation"));
     actionRedo->setEnabled(curEditor->document()->isRedoAvailable());
-    CHECKED_CONNECT(actionRedo, &QAction::triggered, curEditor, &QTextEdit::redo);
+    CHECKED_CONNECT(actionRedo, &QAction::triggered, curEditor, &QPlainTextEdit::redo);
     CHECKED_CONNECT(curEditor->document(), &QTextDocument::redoAvailable, actionRedo, &QAction::setEnabled);
 
     actionCut = new QAction(tr("Cu&t"), this);
     actionCut->setShortcut(QKeySequence::Cut);
     actionCut->setStatusTip(tr("Cut the current selection to the clipboard"));
     actionCut->setEnabled(false);
-    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, actionCut, &QAction::setEnabled);
-//    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, this, &MainWindow::debug);
-    CHECKED_CONNECT(actionCut, &QAction::triggered, curEditor, &QTextEdit::cut);
+    CHECKED_CONNECT(curEditor, &QPlainTextEdit::copyAvailable, actionCut, &QAction::setEnabled);
+//    CHECKED_CONNECT(curEditor, &QPlainTextEdit::copyAvailable, this, &MainWindow::debug);
+    CHECKED_CONNECT(actionCut, &QAction::triggered, curEditor, &QPlainTextEdit::cut);
 
     actionCopy = new QAction(tr("&Copy"), this);
     actionCopy->setShortcut(QKeySequence::Copy);
     actionCopy->setStatusTip(tr("Copy the current selection to the clipboard"));
     actionCopy->setEnabled(false);
-    CHECKED_CONNECT(curEditor, &QTextEdit::copyAvailable, actionCopy, &QAction::setEnabled);
-    CHECKED_CONNECT(actionCopy, &QAction::triggered, curEditor, &QTextEdit::copy);
+    CHECKED_CONNECT(curEditor, &QPlainTextEdit::copyAvailable, actionCopy, &QAction::setEnabled);
+    CHECKED_CONNECT(actionCopy, &QAction::triggered, curEditor, &QPlainTextEdit::copy);
 
     actionPaste = new QAction(tr("&Paste"), this);
     actionPaste->setShortcut(QKeySequence::Paste);
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
-    CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QTextEdit::paste);
+    CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QPlainTextEdit::paste);
+
+    actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
+    actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
+    actionShowLineNumbers->setCheckable(true);
+    actionShowLineNumbers->setChecked(mainWindowPreferences->editorShowLineNumbers());
+    CHECKED_CONNECT(actionShowLineNumbers, &QAction::triggered, curEditor, &Editor::xableLineNumbers);
 
     actionPrefs = new QAction(tr("Pre&ferences"), this);
     actionPrefs->setShortcut(QKeySequence::Preferences);
@@ -207,6 +213,8 @@ void MainWindow::createMenus()
     editMenu->addAction(actionCut);
     editMenu->addAction(actionCopy);
     editMenu->addAction(actionPaste);
+    editMenu->addSeparator();
+    editMenu->addAction(actionShowLineNumbers);
     editMenu->addSeparator();
     editMenu->addAction(actionPrefs);   // this will appear in application menu on macOS
 
