@@ -538,6 +538,8 @@ PreferencesDialog::PreferencesDialog(QWidget *parent)
     mainLayout->addWidget(okCancelButtonBox);
     setLayout(mainLayout);
 
+    this->layout()->setSizeConstraint(QLayout::SetFixedSize);
+
     setWindowTitle(tr("RTcmixShell Preferences"));
 }
 
