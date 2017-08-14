@@ -392,6 +392,7 @@ SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent)
     colorLayout->addRow(tr("Reserved words:"), reservedButton);
     colorLayout->addRow(tr("Strings:"), stringButton);
     colorLayout->addRow(tr("Unused commands:"), unusedButton);
+    colorLayout->setHorizontalSpacing(20);  // default appears to be 10 -- too tight
     colorGroupBox->setLayout(colorLayout);
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
