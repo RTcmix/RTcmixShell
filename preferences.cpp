@@ -114,7 +114,7 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     audioLayout->addRow(tr("Output Channels:"), outChannelsSpin);
     audioLayout->addRow(tr("Buffer Size:"), bufferSizeMenu);
     audioLayout->addRow(tr("Internal Buses:"), numBusesSpin);
-    audioLayout->setHorizontalSpacing(20);  // default appears to be 10 -- too tight
+    audioLayout->setHorizontalSpacing(10);  // default appears to be 10 -- too tight
     audioGroupBox->setLayout(audioLayout);
 
     QGroupBox *scoreGroupBox = new QGroupBox(tr("Score"));
@@ -313,26 +313,159 @@ void AudioTab::cancelPreferences(Preferences *prefs)
 EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
 {
 /* Layout:
-    Font:                    Size:
-    Tab width: [QSpinBox: 1-8]
-    Log Font Size:
-    (font and size combo boxes as in current toolbar)
+    Editor:
+        [QFormLayout with three rows]
+        Font Family: [QFontComboBox]
+        Font Size:   [QComboBox]
+        Tab width:   [QSpinBox: 1-8]
+    Log:
+        [QVBoxLayout with 2-row QFormLayout and the checkbox]
+        Font Family: [QFontComboBox]
+        Font Size:   [QComboBox]
+        [x] Link Family
+    (Link changes Log font family in sync with editor font.)
 */
+
+    mainWindow = getMainWindow();
+
+    // set up action widgets
+
+    editorFontFamilyMenu = new QFontComboBox;
+    //The filters are too slow. The writing system filter puts weird chars into the menu.
+    //editorFontFamilyMenu->setFontFilters(QFontComboBox::ScalableFonts /* | QFontComboBox::MonospacedFonts */);
+    //editorFontFamilyMenu->setWritingSystem(QFontDatabase::Latin);
+    CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontFamily);
+
+    editorFontSizeMenu = new QComboBox;
+    editorFontSizeMenu->setEditable(true);
+    QList<int> standardSizes = QFontDatabase::standardSizes();
+    // add 16 to the menu, if it's not there
+    if (standardSizes.indexOf(16) == -1) {  // doesn't exist
+        int index = standardSizes.indexOf(18);
+        if (index > -1)
+            standardSizes.insert(index, 16);
+    }
+    foreach (int size, standardSizes)
+        editorFontSizeMenu->addItem(QString::number(size));
+    CHECKED_CONNECT(editorFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontSize);
+
+    editorTabWidthSpin = new QSpinBox;
+    editorTabWidthSpin->setRange(1, 8);
+    CHECKED_CONNECT(editorTabWidthSpin, QOverload<int>::of(&QSpinBox::valueChanged), mainWindow, &MainWindow::editorTabWidth);
+
+    logFontFamilyMenu = new QFontComboBox;
+    CHECKED_CONNECT(logFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontFamily);
+
+    logFontSizeMenu = new QComboBox;
+    logFontSizeMenu->setEditable(true);
+    foreach (int size, standardSizes)
+        logFontSizeMenu->addItem(QString::number(size));
+    CHECKED_CONNECT(logFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontSize);
+
+    logLinkFamily = new QCheckBox(tr("Always set log font family to editor font"));
+    CHECKED_CONNECT(logLinkFamily, &QCheckBox::clicked, this, &EditorTab::logLinkFamilyClicked);
+
+    // set up layouts
+
+    QGroupBox *editorGroupBox = new QGroupBox(tr("Editor"));
+    QFormLayout *editorLayout = new QFormLayout;
+    editorLayout->addRow(tr("Font Family:"), editorFontFamilyMenu);
+    editorLayout->addRow(tr("Font Size:"), editorFontSizeMenu);
+    editorLayout->addRow(tr("Tab Width:"), editorTabWidthSpin);
+    editorLayout->setHorizontalSpacing(8);
+    editorGroupBox->setLayout(editorLayout);
+
+    QGroupBox *logGroupBox = new QGroupBox(tr("Log"));
+    QVBoxLayout *logTopLayout = new QVBoxLayout;
+    QFormLayout *logFontLayout = new QFormLayout;
+    logFontLayout->addRow(tr("Font Family:"), logFontFamilyMenu);
+    logFontLayout->addRow(tr("Font Size:"), logFontSizeMenu);
+    logFontLayout->setHorizontalSpacing(8);
+    logTopLayout->addLayout(logFontLayout);
+    logTopLayout->addWidget(logLinkFamily);
+    logGroupBox->setLayout(logTopLayout);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(editorGroupBox);
+    mainLayout->addWidget(logGroupBox);
+    setLayout(mainLayout);
 }
 
 void EditorTab::initFromPreferences(Preferences *prefs)
 {
-    Q_UNUSED(prefs);
+    prevEditorFontFamily = prefs->editorFontFamily();
+    int index = editorFontFamilyMenu->findText(QFontInfo(prevEditorFontFamily).family());
+    editorFontFamilyMenu->setCurrentIndex(index);
+
+    prevEditorFontSize = prefs->editorFontSize();
+    index = editorFontSizeMenu->findText(QString::number(prevEditorFontSize));
+    editorFontSizeMenu->setCurrentIndex(index);
+
+    prevEditorTabWidth = prefs->editorTabWidth();
+    editorTabWidthSpin->setValue(prevEditorTabWidth);
+
+    prevLogFontFamily = prefs->logFontFamily();
+    index = logFontFamilyMenu->findText(QFontInfo(prevLogFontFamily).family());
+    logFontFamilyMenu->setCurrentIndex(index);
+
+    prevLogFontSize = prefs->logFontSize();
+    index = logFontSizeMenu->findText(QString::number(prevLogFontSize));
+    logFontSizeMenu->setCurrentIndex(index);
+
+    prevLogLinkFamily = prefs->logLinkFamily();
+    logLinkFamily->setChecked(prevLogLinkFamily);
+    logLinkFamilyClicked(prevLogLinkFamily);
 }
 
 void EditorTab::applyPreferences(Preferences *prefs)
 {
-    Q_UNUSED(prefs);
+    // These changes have already been made in MainWindow, but
+    // they need to go also into prefs.
+    prefs->setEditorFontFamily(editorFontFamilyMenu->currentText());
+    prefs->setEditorFontSize(editorFontSizeMenu->currentText().toInt());
+    prefs->setEditorTabWidth(editorTabWidthSpin->value());
+    prefs->setLogFontFamily(editorFontFamilyMenu->currentText());
+    prefs->setLogFontSize(logFontSizeMenu->currentText().toInt());
+    prefs->setLogLinkFamily(logLinkFamily->isChecked());
 }
 
 void EditorTab::cancelPreferences(Preferences *prefs)
 {
-    Q_UNUSED(prefs);
+    mainWindow->editorFontFamily(prevEditorFontFamily);
+    prefs->setEditorFontFamily(prevEditorFontFamily);
+
+    mainWindow->editorFontSize(QString::number(prevEditorFontSize));
+    prefs->setEditorFontSize(prevEditorFontSize);
+
+    mainWindow->editorTabWidth(prevEditorTabWidth);
+    prefs->setEditorTabWidth(prevEditorTabWidth);
+
+    mainWindow->logFontFamily(prevLogFontFamily);
+    prefs->setLogFontFamily(prevLogFontFamily);
+
+    mainWindow->logFontSize(QString::number(prevLogFontSize));
+    prefs->setLogFontSize(prevLogFontSize);
+
+    prefs->setLogLinkFamily(prevLogLinkFamily);
+}
+
+void EditorTab::linkedEditorFontFamilyChanged(const QString &family)
+{
+    int index = editorFontFamilyMenu->currentIndex();
+    logFontFamilyMenu->setCurrentIndex(index);
+    mainWindow->logFontFamily(family);
+}
+
+void EditorTab::logLinkFamilyClicked(bool isChecked)
+{
+    if (isChecked) {
+        logFontFamilyMenu->setEnabled(false);
+        CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), this, &EditorTab::linkedEditorFontFamilyChanged);
+    }
+    else {
+        disconnect(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), this, &EditorTab::linkedEditorFontFamilyChanged);
+        logFontFamilyMenu->setEnabled(true);
+    }
 }
 
 
@@ -363,7 +496,7 @@ SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent)
     // set up action widgets
 
     xableHighlighting = new QCheckBox(tr("Enable Syntax Highlighting"));
-    CHECKED_CONNECT(xableHighlighting, &QCheckBox::toggled, this, &SyntaxHighlightingTab::setHighlighting);
+    CHECKED_CONNECT(xableHighlighting, &QCheckBox::clicked, this, &SyntaxHighlightingTab::setHighlighting);
 
     commentButton = new SelectColorButton();
     CHECKED_CONNECT(commentButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setCommentColor);
@@ -398,7 +531,7 @@ SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent)
     colorLayout->addRow(tr("Reserved words:"), reservedButton);
     colorLayout->addRow(tr("Strings:"), stringButton);
     colorLayout->addRow(tr("Unused commands:"), unusedButton);
-    colorLayout->setHorizontalSpacing(20);  // default appears to be 10 -- too tight
+    colorLayout->setHorizontalSpacing(10);
     colorGroupBox->setLayout(colorLayout);
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
@@ -415,17 +548,21 @@ void SyntaxHighlightingTab::initFromPreferences(Preferences *prefs)
     xableHighlighting->setChecked(prevDoSyntaxHighlighting);
 
     prevCommentColor = prefs->editorCommentColor();
-    prevFunctionColor = prefs->editorFunctionColor();
-    prevNumberColor = prefs->editorNumberColor();
-    prevReservedColor = prefs->editorReservedColor();
-    prevStringColor = prefs->editorStringColor();
-    prevUnusedColor = prefs->editorUnusedColor();
-
     commentButton->setColor(prevCommentColor);
+
+    prevFunctionColor = prefs->editorFunctionColor();
     functionButton->setColor(prevFunctionColor);
+
+    prevNumberColor = prefs->editorNumberColor();
     numberButton->setColor(prevNumberColor);
+
+    prevReservedColor = prefs->editorReservedColor();
     reservedButton->setColor(prevReservedColor);
+
+    prevStringColor = prefs->editorStringColor();
     stringButton->setColor(prevStringColor);
+
+    prevUnusedColor = prefs->editorUnusedColor();
     unusedButton->setColor(prevUnusedColor);
 }
 
@@ -624,3 +761,43 @@ void Preferences::reportError()
     }
 }
 
+void Preferences::dump()
+{
+    // If prefs seem to stick around on macOS, even after you've deleted the
+    // relevant files, then you need to force macOS to dump its cache of
+    // prefs. Quit the user's cfprefsd process in Activity Monitor.
+
+    QStringList keys;
+
+    qDebug() << "mainwindow" << "..............................................";
+    settings->beginGroup("mainwindow");
+    keys = settings->allKeys();
+    foreach (const QString &key, keys) {
+        qDebug() << "key:" << key << "val:" << settings->value(key);
+    }
+    settings->endGroup();
+
+    qDebug() << "audio" << "...................................................";
+    settings->beginGroup("audio");
+    keys = settings->allKeys();
+    foreach (const QString &key, keys) {
+        qDebug() << "key:" << key << "val:" << (settings->value(key)).toString();
+    }
+    settings->endGroup();
+
+    qDebug() << "editor" << "..................................................";
+    settings->beginGroup("editor");
+    keys = settings->allKeys();
+    foreach (const QString &key, keys) {
+        qDebug() << "key:" << key << "val:" << (settings->value(key)).toString();
+    }
+    settings->endGroup();
+
+    qDebug() << "log" << ".....................................................";
+    settings->beginGroup("log");
+    keys = settings->allKeys();
+    foreach (const QString &key, keys) {
+        qDebug() << "key:" << key << "val:" << (settings->value(key)).toString();
+    }
+    settings->endGroup();
+}

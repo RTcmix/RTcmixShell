@@ -5,8 +5,6 @@
 
 QT_BEGIN_NAMESPACE
 class QAction;
-class QComboBox;
-class QFontComboBox;
 class QMenu;
 class QPushButton;
 class QSettings;
@@ -39,6 +37,11 @@ protected:
 
 public slots:
     void stopScore();
+    void editorFontFamily(const QString &);
+    void editorFontSize(const QString &);
+    void editorTabWidth(const int &);
+    void logFontFamily(const QString &);
+    void logFontSize(const QString &);
 
 private slots:
     void about();
@@ -47,8 +50,6 @@ private slots:
     bool fileSaveAs();
     void playScore();
     void record();
-    void textFamily(const QString &);
-    void textSize(const QString &);
     void clipboardDataChanged();
     void checkScoreFinished();
     void setScorePlayMode();
@@ -67,7 +68,6 @@ private:
     void createVerticalSplitter();
     void setCurrentFileName(const QString &);
     bool maybeSave();
-    void updateFontMenus(const QFont &);
     void setTabStops();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
@@ -106,8 +106,6 @@ private:
     QPushButton *playButton;
     QPushButton *stopButton;
     QPushButton *recordButton;
-    QFontComboBox *comboFont;
-    QComboBox *comboSize;
     QTimer *scoreFinishedTimer;
 
     enum ScorePlayMode {
@@ -119,6 +117,7 @@ private:
     bool recording;
     bool reinitRTcmixOnPlay;
     bool firstFileDialog;
+    int tabWidth;
 
     Preferences *mainWindowPreferences;
 };

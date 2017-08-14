@@ -428,6 +428,10 @@ int deviceIDFromName(const QString &name)
 int deviceNameFromID(const int deviceID, QString &name)
 {
     const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(deviceID);
+    if (deviceInfo == NULL) {
+        qWarning("deviceNameFromID: can't get info for device %d", deviceID);    // FIXME: pop alert instead
+        return -1;
+    }
     name = deviceInfo->name;
     return 0;
 }

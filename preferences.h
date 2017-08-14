@@ -13,10 +13,12 @@ class QCheckBox;
 class QColor;
 class QComboBox;
 class QDialogButtonBox;
+class QFontComboBox;
 class QSpinBox;
 class QTabWidget;
 QT_END_NAMESPACE
 class Highlighter;
+class MainWindow;
 class Preferences;
 
 class SelectColorButton : public QPushButton
@@ -88,6 +90,25 @@ public:
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
     void cancelPreferences(Preferences *);
+
+private slots:
+    void logLinkFamilyClicked(bool);
+    void linkedEditorFontFamilyChanged(const QString &);
+
+private:
+    MainWindow *mainWindow;
+    QString prevEditorFontFamily;
+    int prevEditorFontSize;
+    int prevEditorTabWidth;
+    QString prevLogFontFamily;
+    int prevLogFontSize;
+    bool prevLogLinkFamily;
+    QFontComboBox *editorFontFamilyMenu;
+    QComboBox *editorFontSizeMenu;
+    QSpinBox *editorTabWidthSpin;
+    QFontComboBox *logFontFamilyMenu;
+    QComboBox *logFontSizeMenu;
+    QCheckBox *logLinkFamily;
 };
 
 class SyntaxHighlightingTab : public QWidget
@@ -156,6 +177,7 @@ class Preferences : public QObject
 public:
     Preferences();
     void savePreferences();
+    void dump();
 
     // accessors - the getter methods return a default value if none is saved in settings file
 
@@ -170,8 +192,8 @@ public:
 
     // Editor
 
-    QString editorFontName() { return settings->value("editor/fontName", "Courier New").toString(); }
-    void setEditorFontName(QString name) { settings->setValue("editor/fontName", name); }
+    QString editorFontFamily() { return settings->value("editor/fontFamily", "Courier New").toString(); }
+    void setEditorFontFamily(QString family) { settings->setValue("editor/fontFamily", family); }
 
     double editorFontSize() { return settings->value("editor/fontSize", 14.0).toDouble(); }
     void setEditorFontSize(double size) { settings->setValue("editor/fontSize", size); }
@@ -210,11 +232,14 @@ public:
     bool logShowOnLaunch() { return settings->value("log/showOnLaunch", true).toBool(); }
     void setLogShowOnLaunch(bool showOnLaunch) { settings->setValue("log/showOnLaunch", showOnLaunch); }
 
-    QString logFontName() { return settings->value("log/fontName", "Courier New").toString(); }
-    void setLogFontName(QString name) { settings->setValue("log/fontName", name); }
+    QString logFontFamily() { return settings->value("log/fontFamily", "Courier New").toString(); }
+    void setLogFontFamily(QString family) { settings->setValue("log/fontFamily", family); }
 
     double logFontSize() { return settings->value("log/fontSize", 12.0).toDouble(); }
     void setLogFontSize(double size) { settings->setValue("log/fontSize", size); }
+
+    bool logLinkFamily() { return settings->value("log/linkFamily", true).toBool(); }
+    void setLogLinkFamily(bool linkFamily) { settings->setValue("log/linkFamily", linkFamily); }
 
     // Audio
 

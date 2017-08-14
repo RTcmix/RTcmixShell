@@ -60,6 +60,8 @@ void MainWindow::createPreferences()
 {
     mainWindowPreferences = new Preferences();
 
+    mainWindowPreferences->dump();
+
     // window size, position to use if no settings
     const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
     int width = qMin(availableGeometry.width() / 2, 800);
@@ -265,6 +267,7 @@ void MainWindow::createToolbars()
     tb->addWidget(recordButton);
     CHECKED_CONNECT(recordButton, &QPushButton::clicked, this, &MainWindow::record);
 
+#ifdef NOMORE
     // font family/size popups -------------------------------------
 
     tb = addToolBar(tr("Text"));
@@ -286,23 +289,7 @@ void MainWindow::createToolbars()
     comboSize->setCurrentIndex(standardSizes.indexOf(QApplication::font().pointSize()));
 
     CHECKED_CONNECT(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textSize);
-}
-
-void MainWindow::initFonts()
-{
-    QFont font(mainWindowPreferences->editorFontName(), mainWindowPreferences->editorFontSize());
-//    font.setStyleHint(QFont::Monospace);
-//    font.setFixedPitch(true);
-    curEditor->setFont(font);
-    curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
-
-    font.setFamily(mainWindowPreferences->logFontName());
-    font.setPointSize(mainWindowPreferences->logFontSize());
-//    font.setStyleHint(QFont::Monospace);
-//    font.setFixedPitch(true);
-    rtcmixLogView->setFont(font);
-
-    updateFontMenus(curEditor->font());
+#endif
 }
 
 // NB: plural, in anticipation of tabbed editors
@@ -329,33 +316,57 @@ void MainWindow::createVerticalSplitter()
     splitter->setCollapsible(edIndex, false);
 }
 
-void MainWindow::textFamily(const QString &f)
+void MainWindow::initFonts()
+{
+    QFont font(mainWindowPreferences->editorFontFamily(), mainWindowPreferences->editorFontSize());
+    curEditor->setFont(font);
+    tabWidth = mainWindowPreferences->editorTabWidth();
+    curEditor->setTabStopChars(tabWidth);
+
+    font.setFamily(mainWindowPreferences->logFontFamily());
+    font.setPointSize(mainWindowPreferences->logFontSize());
+    rtcmixLogView->setFont(font);
+}
+
+void MainWindow::editorFontFamily(const QString &f)
 {
     QFont font = curEditor->font();
     font.setFamily(f);
     curEditor->setFont(font);
-    curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
-    updateFontMenus(curEditor->font());   
-
-    rtcmixLogView->setFont(font);
-
-    mainWindowPreferences->setEditorFontName(f);
-    mainWindowPreferences->setLogFontName(f);
+    curEditor->setTabStopChars(tabWidth);
 }
 
-void MainWindow::textSize(const QString &p)
+void MainWindow::editorFontSize(const QString &p)
 {
     qreal pointSize = p.toFloat();
     if (pointSize > 0) {
         QFont font = curEditor->font();
         font.setPointSize(pointSize);
         curEditor->setFont(font);
-        curEditor->setTabStopChars(mainWindowPreferences->editorTabWidth());
-        updateFontMenus(curEditor->font());
-        font.setPointSize(mainWindowPreferences->logFontSize());
-        rtcmixLogView->setFont(font);
+        curEditor->setTabStopChars(tabWidth);
+    }
+}
 
-        mainWindowPreferences->setEditorFontSize(pointSize);
+void MainWindow::editorTabWidth(const int &w)
+{
+    tabWidth = w;
+    curEditor->setTabStopChars(tabWidth);
+}
+
+void MainWindow::logFontFamily(const QString &f)
+{
+    QFont font = rtcmixLogView->font();
+    font.setFamily(f);
+    rtcmixLogView->setFont(font);
+}
+
+void MainWindow::logFontSize(const QString &p)
+{
+    qreal pointSize = p.toFloat();
+    if (pointSize > 0) {
+        QFont font = rtcmixLogView->font();
+        font.setPointSize(pointSize);
+        rtcmixLogView->setFont(font);
     }
 }
 
@@ -363,12 +374,6 @@ void MainWindow::clipboardDataChanged()
 {
     if (const QMimeData *md = QApplication::clipboard()->mimeData())
         actionPaste->setEnabled(md->hasText());
-}
-
-void MainWindow::updateFontMenus(const QFont &f)
-{
-    comboFont->setCurrentIndex(comboFont->findText(QFontInfo(f).family()));
-    comboSize->setCurrentIndex(comboSize->findText(QString::number(f.pointSize())));
 }
 
 void MainWindow::about()
