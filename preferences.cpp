@@ -87,38 +87,44 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 
     Values constrained by conformValuesToSelectedDevice().
 */
-    QLabel *outDeviceLabel = new QLabel(tr("Output Device:"));
+
+    // set up action widgets
+
     outDeviceMenu = new QComboBox();
     initDeviceMenus();
     CHECKED_CONNECT(outDeviceMenu, QOverload<int>::of(&QComboBox::activated), this, &AudioTab::conformValuesToSelectedDevice);
 
-    QLabel *samplingRateLabel = new QLabel(tr("Sampling Rate:"));
     samplingRateMenu = new QComboBox();
 
-    QLabel *outChannelsLabel = new QLabel(tr("Output Channels:"));
     outChannelsSpin = new QSpinBox();
 
-    QLabel *bufferSizeLabel = new QLabel(tr("Buffer Size:"));
     bufferSizeMenu = new QComboBox();
 
-    QLabel *numBusesLabel = new QLabel(tr("Internal Buses:"));
     numBusesSpin = new QSpinBox();
     numBusesSpin->setRange(minNumBuses, maxNumBuses);
 
     warnOverlappingScores = new QCheckBox(tr("Warn when choosing Allow Overlapping Scores"));
 
-    QGridLayout *mainLayout = new QGridLayout;
-    mainLayout->addWidget(outDeviceLabel, 0, 0);
-    mainLayout->addWidget(outDeviceMenu, 0, 1);
-    mainLayout->addWidget(samplingRateLabel, 1, 0);
-    mainLayout->addWidget(samplingRateMenu, 1, 1);
-    mainLayout->addWidget(outChannelsLabel, 2, 0);
-    mainLayout->addWidget(outChannelsSpin, 2, 1);
-    mainLayout->addWidget(bufferSizeLabel, 3, 0);
-    mainLayout->addWidget(bufferSizeMenu, 3, 1);
-    mainLayout->addWidget(numBusesLabel, 4, 0);
-    mainLayout->addWidget(numBusesSpin, 4, 1);
-    mainLayout->addWidget(warnOverlappingScores, 5, 0, 1, 2);
+    // set up layouts
+
+    QGroupBox *audioGroupBox = new QGroupBox(tr("Audio"));
+    QFormLayout *audioLayout = new QFormLayout;
+    audioLayout->addRow(tr("Output Device:"), outDeviceMenu);
+    audioLayout->addRow(tr("Sampling Rate:"), samplingRateMenu);
+    audioLayout->addRow(tr("Output Channels:"), outChannelsSpin);
+    audioLayout->addRow(tr("Buffer Size:"), bufferSizeMenu);
+    audioLayout->addRow(tr("Internal Buses:"), numBusesSpin);
+    audioLayout->setHorizontalSpacing(20);  // default appears to be 10 -- too tight
+    audioGroupBox->setLayout(audioLayout);
+
+    QGroupBox *scoreGroupBox = new QGroupBox(tr("Score"));
+    QVBoxLayout *scoreLayout = new QVBoxLayout;
+    scoreLayout->addWidget(warnOverlappingScores);
+    scoreGroupBox->setLayout(scoreLayout);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(audioGroupBox);
+    mainLayout->addWidget(scoreGroupBox);
     setLayout(mainLayout);
 }
 
@@ -400,8 +406,7 @@ SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent)
     mainLayout->addWidget(colorGroupBox);
     setLayout(mainLayout);
 
-
-    highlighter->dumpRules();
+//    highlighter->dumpRules();
 }
 
 void SyntaxHighlightingTab::initFromPreferences(Preferences *prefs)
