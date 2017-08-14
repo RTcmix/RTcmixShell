@@ -60,7 +60,7 @@ void MainWindow::createPreferences()
 {
     mainWindowPreferences = new Preferences();
 
-    mainWindowPreferences->dump();
+//    mainWindowPreferences->dump();
 
     // window size, position to use if no settings
     const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
