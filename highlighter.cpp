@@ -62,41 +62,46 @@ Highlighter::Highlighter(QTextDocument *parent)
     HighlightingRule rule;
 
     // 1. reserved key words
-    keywordFormat.setForeground(Qt::magenta);
+    keywordFormat.setForeground(syntaxHighlightingPreferences->editorReservedColor());
 //    keywordFormat.setFontWeight(QFont::Bold);
     QStringList keywordPatterns;
     keywordPatterns << "\\bfloat\\b" << "\\bif\\b" << "\\belse\\b" << "\\return\\b" << "\\bstring\\b"
                     << "\\bfor\\b" << "\\bwhile\\b" << "\\binclude\\b" << "\\bhandle\\b" << "\\blist\\b"
                     << "\\btrue\\b" << "\\bfalse\\b" << "\\bTRUE\\b" << "\\bFALSE\\b";
     foreach (const QString &pattern, keywordPatterns) {
+        rule.type = ReservedRule;
         rule.format = keywordFormat;
         rule.pattern = QRegularExpression(pattern);
         highlightingRules.append(rule);
     }
 
     // 2. numbers
-    numberFormat.setForeground(Qt::red);
+    numberFormat.setForeground(syntaxHighlightingPreferences->editorNumberColor());
+    rule.type = NumberRule;
     rule.format = numberFormat;
     rule.pattern = QRegularExpression("\\.?\\b\\d+\\.?\\d?\\b\\.?");
     highlightingRules.append(rule);
 
     // 3. double-quoted strings
-    quotationFormat.setForeground(Qt::red);
+    quotationFormat.setForeground(syntaxHighlightingPreferences->editorStringColor());
+    rule.type = StringRule;
     rule.format = quotationFormat;
     rule.pattern = QRegularExpression("\".*\"");
     highlightingRules.append(rule);
 
     // 4. functions, including instruments (i.e., anything except keywords that are followed by '(')
 //    functionFormat.setFontItalic(true);
-    functionFormat.setForeground(Qt::darkGreen);
+    functionFormat.setForeground(syntaxHighlightingPreferences->editorFunctionColor());
+    rule.type = FunctionRule;
     rule.format = functionFormat;
     rule.pattern = QRegularExpression("\\b[A-Za-z0-9_]+(?=\\()");
     highlightingRules.append(rule);
 
     // 5. RTcmix commands that don't function in this environment, currently:
     //    rtsetparams, rtoutput, load
-    invalidFuncsFormat.setForeground(Qt::darkGray);
-    rule.format = invalidFuncsFormat;
+    unusedFuncsFormat.setForeground(syntaxHighlightingPreferences->editorUnusedColor());
+    rule.type = UnusedRule;
+    rule.format = unusedFuncsFormat;
     rule.pattern = QRegularExpression("\\s*rtsetparams\\s*\\(.*\\).*");
     highlightingRules.append(rule);
 //    qDebug() << "rule.pattern" << rule.pattern;
@@ -106,50 +111,84 @@ Highlighter::Highlighter(QTextDocument *parent)
     highlightingRules.append(rule);
 
     // 6. C++-style comments
-    singleLineCommentFormat.setForeground(Qt::blue);
+    singleLineCommentFormat.setForeground(syntaxHighlightingPreferences->editorCommentColor());
+    rule.type = CommentRule;
     rule.format = singleLineCommentFormat;
     rule.pattern = QRegularExpression("//[^\n]*");
     highlightingRules.append(rule);
 
     // 7. shell-style comments (beginning with '#')
-    hashLineCommentFormat.setForeground(Qt::blue);
+    hashLineCommentFormat.setForeground(syntaxHighlightingPreferences->editorCommentColor());
+    rule.type = CommentRule;
     rule.format = hashLineCommentFormat;
     rule.pattern = QRegularExpression("#[^\n]*");
     highlightingRules.append(rule);
 
     // 8. C-style multiline comments
-    multiLineCommentFormat.setForeground(Qt::blue);
+    multiLineCommentFormat.setForeground(syntaxHighlightingPreferences->editorCommentColor());
     commentStartExpression = QRegularExpression("/\\*");
     commentEndExpression = QRegularExpression("\\*/");
+
+    rulesActive = syntaxHighlightingPreferences->editorDoSyntaxHighlighting();
+}
+
+void Highlighter::setRuleColor(SyntaxHighlighterRule ruleType, QColor color)
+{
+//    qDebug() << "setRuleColor:  ruleType:" << ruleType << "color:" << color;
+    bool rehighlight = false;
+    int size = highlightingRules.size();
+    for (int i = 0; i < size; i++) {
+        if (highlightingRules[i].type == ruleType) {
+            QTextCharFormat newFormat;
+            newFormat.setForeground(color);
+            highlightingRules[i].format = newFormat;
+            rehighlight = true;
+//            qDebug() << "   type:" << highlightingRules[i].type << " foreground:" << highlightingRules[i].format;
+        }
+    }
+    if (rehighlight)
+        this->rehighlight();
 }
 
 void Highlighter::highlightBlock(const QString &text)
 {
-    foreach (const HighlightingRule &rule, highlightingRules) {
-        QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
-        while (matchIterator.hasNext()) {
-            QRegularExpressionMatch match = matchIterator.next();
-            setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+    if (rulesActive) {
+        foreach (const HighlightingRule &rule, highlightingRules) {
+            QRegularExpressionMatchIterator matchIterator = rule.pattern.globalMatch(text);
+            while (matchIterator.hasNext()) {
+                QRegularExpressionMatch match = matchIterator.next();
+                setFormat(match.capturedStart(), match.capturedLength(), rule.format);
+            }
+        }
+        setCurrentBlockState(0);
+
+        int startIndex = 0;
+        if (previousBlockState() != 1)
+            startIndex = text.indexOf(commentStartExpression);
+
+        while (startIndex >= 0) {
+            QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
+            int endIndex = match.capturedStart();
+            int commentLength = 0;
+            if (endIndex == -1) {
+                setCurrentBlockState(1);
+                commentLength = text.length() - startIndex;
+            } else {
+                commentLength = endIndex - startIndex
+                                + match.capturedLength();
+            }
+            setFormat(startIndex, commentLength, multiLineCommentFormat);
+            startIndex = text.indexOf(commentStartExpression, startIndex + commentLength);
         }
     }
-    setCurrentBlockState(0);
+}
 
-    int startIndex = 0;
-    if (previousBlockState() != 1)
-        startIndex = text.indexOf(commentStartExpression);
-
-    while (startIndex >= 0) {
-        QRegularExpressionMatch match = commentEndExpression.match(text, startIndex);
-        int endIndex = match.capturedStart();
-        int commentLength = 0;
-        if (endIndex == -1) {
-            setCurrentBlockState(1);
-            commentLength = text.length() - startIndex;
-        } else {
-            commentLength = endIndex - startIndex
-                            + match.capturedLength();
-        }
-        setFormat(startIndex, commentLength, multiLineCommentFormat);
-        startIndex = text.indexOf(commentStartExpression, startIndex + commentLength);
+void Highlighter::dumpRules()
+{
+    qDebug("\n******* printing highlighting rules *******");
+    QVectorIterator<HighlightingRule> it(highlightingRules);
+    while (it.hasNext()) {
+        HighlightingRule h = it.next();
+        qDebug() << "type:" << h.type << "pattern:" << h.pattern << "\n   foreground:" << h.format.foreground();
     }
 }

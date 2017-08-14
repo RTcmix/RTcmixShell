@@ -67,12 +67,26 @@ class Highlighter : public QSyntaxHighlighter
 public:
     Highlighter(QTextDocument *parent = 0);
 
+    enum SyntaxHighlighterRule {  // NB: these must match HighlightingRules indices
+        CommentRule = 0,
+        FunctionRule,
+        NumberRule,
+        ReservedRule,
+        StringRule,
+        UnusedRule
+    };
+
+    void setRuleColor(SyntaxHighlighterRule, QColor);
+    void xableAllRules(bool enable) { rulesActive = enable; }
+    void dumpRules();
+
 protected:
     void highlightBlock(const QString &text) override;
 
 private:
     struct HighlightingRule
     {
+        SyntaxHighlighterRule type;
         QRegularExpression pattern;
         QTextCharFormat format;
     };
@@ -85,10 +99,12 @@ private:
     QTextCharFormat numberFormat;
     QTextCharFormat quotationFormat;
     QTextCharFormat functionFormat;
-    QTextCharFormat invalidFuncsFormat;
+    QTextCharFormat unusedFuncsFormat;
     QTextCharFormat singleLineCommentFormat;
     QTextCharFormat hashLineCommentFormat;
     QTextCharFormat multiLineCommentFormat;
+
+    bool rulesActive;
 
     Preferences *syntaxHighlightingPreferences;
 };

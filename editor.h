@@ -7,6 +7,7 @@ QT_BEGIN_NAMESPACE
 class QString;
 class QWidget;
 QT_END_NAMESPACE
+class Highlighter;
 class MainWindow;
 class Preferences;
 
@@ -20,6 +21,7 @@ public:
     void setTabStopChars(int tabStopChars);
     void lineNumberAreaPaintEvent(QPaintEvent *event);
     int lineNumberAreaWidth();
+    Highlighter *getHighlighter() { return highlighter; }
 
 protected:
     void dragEnterEvent(QDragEnterEvent *) override;
@@ -36,6 +38,7 @@ private slots:
 
 private:
     MainWindow *parent;
+    Highlighter *highlighter;
     QWidget *lineNumberArea;
     bool showLineNumbers;
 

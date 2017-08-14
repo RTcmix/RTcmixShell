@@ -3,6 +3,7 @@
 #include <QtDebug>
 
 #include "audio.h"
+#include "highlighter.h"
 #include "mainwindow.h"
 #include "preferences.h"
 #include "utils.h"
@@ -12,6 +13,37 @@
 const int minNumBuses = 8;
 const int maxNumBuses = 96;
 
+
+// SelectColorButton adapted from jpo38 at https://stackoverflow.com/questions/18257281/qt-color-picker-widget.
+SelectColorButton::SelectColorButton(QWidget *parent)
+{
+    Q_UNUSED(parent);
+    CHECKED_CONNECT(this, &QPushButton::clicked, this, &SelectColorButton::changeColor);
+}
+
+void SelectColorButton::updateColor()
+{
+    setStyleSheet("background-color: " + color.name());
+}
+
+void SelectColorButton::changeColor()
+{
+    QColor newColor = QColorDialog::getColor(color, parentWidget());
+    if (newColor != color)
+        setColor(newColor);
+}
+
+void SelectColorButton::setColor(const QColor &color)
+{
+    this->color = color;
+    updateColor();
+    emit colorChanged(this->color);
+}
+
+const QColor &SelectColorButton::getColor()
+{
+    return color;
+}
 
 
 #ifdef GENERALTAB
@@ -29,6 +61,11 @@ void GeneralTab::applyPreferences(Preferences *prefs)
     Q_UNUSED(prefs);
 }
 
+void GeneralTab::cancelPreferences(Preferences *prefs)
+{
+
+}
+
 #endif
 
 
@@ -42,14 +79,13 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     Output Device:   [popup menu: names from portaudio]
     Sampling Rate:   [popup menu: e.g., 22050, 44100, 48000, 88200, 96000]
     Output Channels: [QSpinBox: 1-16]
-    Buffer Size:     [popup menu: e.g., 64, 128, 256, 512, 1024, 2048, 4096, 8192]
+    Buffer Size:     [popup menu: e.g., 64, 128, 256, 512, 1024, 2048, 4096]
     Internal Buses:  [QSpinbox: 8-64]
 
     (outside grid layout)
     [x] Warn when choosing Allow Overlapping Scores
 
-    model on "audiodevices" example project, except that uses a .ui file
-    popup menus are QComboBox without setEditable(true)
+    Values constrained by conformValuesToSelectedDevice().
 */
     QLabel *outDeviceLabel = new QLabel(tr("Output Device:"));
     outDeviceMenu = new QComboBox();
@@ -259,6 +295,12 @@ void AudioTab::conformValuesToSelectedDevice(int outputDeviceMenuID)
         qDebug("conform: no valid buffer sizes for this device");
 }
 
+void AudioTab::cancelPreferences(Preferences *prefs)
+{
+    // We don't apply audio prefs while in the dialog, so this method isn't used.
+    Q_UNUSED(prefs);
+}
+
 
 //-------------------------------------------------------------------------------
 
@@ -282,10 +324,17 @@ void EditorTab::applyPreferences(Preferences *prefs)
     Q_UNUSED(prefs);
 }
 
+void EditorTab::cancelPreferences(Preferences *prefs)
+{
+    Q_UNUSED(prefs);
+}
+
 
 //-------------------------------------------------------------------------------
 
-SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent) : QWidget(parent)
+SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent)
+    : QWidget(parent)
+    , highlighter(NULL)
 {
 /*  QHBoxLayout:
        [x] Enable Syntax Highlighting
@@ -297,20 +346,165 @@ SyntaxHighlightingTab::SyntaxHighlightingTab(QWidget *parent) : QWidget(parent)
         Functions       [swatch]
         Unused commands [swatch]
         Comments        [swatch]
-     (clicking swatches invokes QColorDialog
-      for swatch, see answer by jpo38:
-      https://stackoverflow.com/questions/18257281/qt-color-picker-widget )
+     (clicking swatches invokes QColorDialog)
 */
+    // get a pointer to the syntax highlighter
+
+    MainWindow *mw = getMainWindow();
+    if (mw)
+        highlighter = mw->getHighlighter();
+
+    // set up action widgets
+
+    xableHighlighting = new QCheckBox(tr("Enable Syntax Highlighting"));
+    CHECKED_CONNECT(xableHighlighting, &QCheckBox::toggled, this, &SyntaxHighlightingTab::setHighlighting);
+
+    commentButton = new SelectColorButton();
+    CHECKED_CONNECT(commentButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setCommentColor);
+
+    functionButton = new SelectColorButton();
+    CHECKED_CONNECT(functionButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setFunctionColor);
+
+    numberButton = new SelectColorButton();
+    CHECKED_CONNECT(numberButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setNumberColor);
+
+    reservedButton = new SelectColorButton();
+    CHECKED_CONNECT(reservedButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setReservedColor);
+
+    stringButton = new SelectColorButton();
+    CHECKED_CONNECT(stringButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setStringColor);
+
+    unusedButton = new SelectColorButton();
+    CHECKED_CONNECT(unusedButton, &SelectColorButton::colorChanged, this, &SyntaxHighlightingTab::setUnusedColor);
+
+    // set up layouts
+
+    QGroupBox *behaviorGroupBox = new QGroupBox(tr("Behavior"));
+    QVBoxLayout *behaviorLayout = new QVBoxLayout;
+    behaviorLayout->addWidget(xableHighlighting);
+    behaviorGroupBox->setLayout(behaviorLayout);
+
+    QGroupBox *colorGroupBox = new QGroupBox(tr("Colors"));
+    QFormLayout *colorLayout = new QFormLayout;
+    colorLayout->addRow(tr("Comments:"), commentButton);
+    colorLayout->addRow(tr("Functions:"), functionButton);
+    colorLayout->addRow(tr("Numbers:"), numberButton);
+    colorLayout->addRow(tr("Reserved words:"), reservedButton);
+    colorLayout->addRow(tr("Strings:"), stringButton);
+    colorLayout->addRow(tr("Unused commands:"), unusedButton);
+    colorGroupBox->setLayout(colorLayout);
+
+    QVBoxLayout *mainLayout = new QVBoxLayout;
+    mainLayout->addWidget(behaviorGroupBox);
+    mainLayout->addWidget(colorGroupBox);
+    setLayout(mainLayout);
+
+
+    highlighter->dumpRules();
 }
 
 void SyntaxHighlightingTab::initFromPreferences(Preferences *prefs)
 {
-    Q_UNUSED(prefs);
+    prevDoSyntaxHighlighting = prefs->editorDoSyntaxHighlighting();
+    xableHighlighting->setChecked(prevDoSyntaxHighlighting);
+
+    prevCommentColor = prefs->editorCommentColor();
+    prevFunctionColor = prefs->editorFunctionColor();
+    prevNumberColor = prefs->editorNumberColor();
+    prevReservedColor = prefs->editorReservedColor();
+    prevStringColor = prefs->editorStringColor();
+    prevUnusedColor = prefs->editorUnusedColor();
+
+    commentButton->setColor(prevCommentColor);
+    functionButton->setColor(prevFunctionColor);
+    numberButton->setColor(prevNumberColor);
+    reservedButton->setColor(prevReservedColor);
+    stringButton->setColor(prevStringColor);
+    unusedButton->setColor(prevUnusedColor);
 }
 
 void SyntaxHighlightingTab::applyPreferences(Preferences *prefs)
 {
-    Q_UNUSED(prefs);
+    // These changes have already been made in highlighter, but
+    // they need to go also into prefs.
+    prefs->setEditorDoSyntaxHighlighting(xableHighlighting->isChecked());
+    prefs->setEditorCommentColor(commentButton->getColor());
+    prefs->setEditorFunctionColor(functionButton->getColor());
+    prefs->setEditorNumberColor(numberButton->getColor());
+    prefs->setEditorReservedColor(reservedButton->getColor());
+    prefs->setEditorStringColor(stringButton->getColor());
+    prefs->setEditorUnusedColor(unusedButton->getColor());
+}
+
+void SyntaxHighlightingTab::cancelPreferences(Preferences *prefs)
+{
+    setHighlighting(prevDoSyntaxHighlighting);
+    prefs->setEditorDoSyntaxHighlighting(prevDoSyntaxHighlighting);
+
+    setCommentColor(prevCommentColor);
+    prefs->setEditorCommentColor(prevCommentColor);
+
+    setFunctionColor(prevFunctionColor);
+    prefs->setEditorFunctionColor(prevFunctionColor);
+
+    setNumberColor(prevNumberColor);
+    prefs->setEditorNumberColor(prevNumberColor);
+
+    setReservedColor(prevReservedColor);
+    prefs->setEditorReservedColor(prevReservedColor);
+
+    setStringColor(prevStringColor);
+    prefs->setEditorStringColor(prevStringColor);
+
+    setUnusedColor(prevUnusedColor);
+    prefs->setEditorUnusedColor(prevUnusedColor);
+
+    if (highlighter)
+        highlighter->rehighlight();
+}
+
+void SyntaxHighlightingTab::setHighlighting(bool checked)
+{
+    if (highlighter) {
+        highlighter->xableAllRules(checked);
+        highlighter->rehighlight();
+    }
+}
+
+void SyntaxHighlightingTab::setCommentColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::CommentRule, color);
+}
+
+void SyntaxHighlightingTab::setFunctionColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::FunctionRule, color);
+}
+
+void SyntaxHighlightingTab::setNumberColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::NumberRule, color);
+}
+
+void SyntaxHighlightingTab::setReservedColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::ReservedRule, color);
+}
+
+void SyntaxHighlightingTab::setStringColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::StringRule, color);
+}
+
+void SyntaxHighlightingTab::setUnusedColor(QColor color)
+{
+    if (highlighter)
+        highlighter->setRuleColor(Highlighter::UnusedRule, color);
 }
 
 
@@ -366,20 +560,23 @@ void PreferencesDialog::applyPreferences(Preferences *prefs)
     syntaxHighlightingTab->applyPreferences(prefs);
 
 #ifdef NOTYET
-    // need signals/slots to force update of these params in other modules
-
-    // Editor tab
     prefs->setEditorFontName();
     prefs->setEditorFontSize();
     prefs->setEditorTabWidth();
     prefs->setEditorShowLineNumbers();
     prefs->setLogFontName();
     prefs->setLogFontSize();
-
-    // Syntax Highlighting tab
-    prefs->setEditorDoSyntaxHighlighting();
-    // add support for changing colors
 #endif
+}
+
+void PreferencesDialog::cancelPreferences(Preferences *prefs)
+{
+#ifdef GENERALTAB
+    generalTab->cancelPreferences(prefs);
+#endif
+    audioTab->cancelPreferences(prefs);
+    editorTab->cancelPreferences(prefs);
+    syntaxHighlightingTab->cancelPreferences(prefs);
 }
 
 
@@ -403,15 +600,16 @@ void Preferences::showPreferencesDialog()
     PreferencesDialog dlog;
     dlog.initFromPreferences(this);
     int result = dlog.exec();     // modal
-    if (result == QDialog::Accepted) {
+    if (result == QDialog::Accepted)
         dlog.applyPreferences(this);
-    }
+    else
+        dlog.cancelPreferences(this);
 }
 
 void Preferences::reportError()
 {
     if (settings->status() == QSettings::AccessError) {
-        qDebug("access error reading settings file");
+        qDebug("Access error reading settings file");
     }
     else if (settings->status() == QSettings::FormatError) {
         qDebug("Your settings file is corrupted; using defaults.");

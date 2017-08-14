@@ -15,9 +15,11 @@ class QPlainTextEdit;
 class QTimer;
 QT_END_NAMESPACE
 class Audio;
-class Editor;
 class RTcmixLogView;
 class Preferences;
+#include "editor.h"
+#include "highlighter.h"
+
 
 class MainWindow : public QMainWindow
 {
@@ -28,6 +30,7 @@ public:
     void fileNew();
     bool loadFile(const QString &);
     void reinitializeAudio();
+    Highlighter *getHighlighter() { return curEditor->getHighlighter(); }
 
     bool scoreFinished;
 

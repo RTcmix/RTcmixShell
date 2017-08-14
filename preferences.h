@@ -3,18 +3,42 @@
 
 #include <QDialog>
 #include <QPoint>
+#include <QPushButton>
 #include <QSettings>
 #include <QSize>
 #include <QWidget>
 
 QT_BEGIN_NAMESPACE
 class QCheckBox;
+class QColor;
 class QComboBox;
 class QDialogButtonBox;
 class QSpinBox;
 class QTabWidget;
 QT_END_NAMESPACE
+class Highlighter;
 class Preferences;
+
+class SelectColorButton : public QPushButton
+{
+    Q_OBJECT
+
+public:
+    SelectColorButton(QWidget *parent = 0);
+
+    void setColor(const QColor &color);
+    const QColor &getColor();
+
+public slots:
+    void updateColor();
+    void changeColor();
+
+signals:
+    void colorChanged(QColor);
+
+private:
+    QColor color;
+};
 
 #ifdef GENERALTAB
 class GeneralTab : public QWidget
@@ -25,6 +49,7 @@ public:
     explicit GeneralTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
+    void cancelPreferences(Preferences *);
 };
 #endif
 
@@ -36,6 +61,7 @@ public:
     explicit AudioTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
+    void cancelPreferences(Preferences *);
 
 private slots:
     void conformValuesToSelectedDevice(int);
@@ -61,6 +87,7 @@ public:
     explicit EditorTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
+    void cancelPreferences(Preferences *);
 };
 
 class SyntaxHighlightingTab : public QWidget
@@ -71,6 +98,33 @@ public:
     explicit SyntaxHighlightingTab(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
+    void cancelPreferences(Preferences *);
+
+private slots:
+    void setHighlighting(bool);
+    void setCommentColor(QColor);
+    void setFunctionColor(QColor);
+    void setNumberColor(QColor);
+    void setReservedColor(QColor);
+    void setStringColor(QColor);
+    void setUnusedColor(QColor);
+
+private:
+    Highlighter *highlighter;
+    bool prevDoSyntaxHighlighting;
+    QColor prevCommentColor;
+    QColor prevFunctionColor;
+    QColor prevNumberColor;
+    QColor prevReservedColor;
+    QColor prevStringColor;
+    QColor prevUnusedColor;
+    QCheckBox *xableHighlighting;
+    SelectColorButton *commentButton;
+    SelectColorButton *functionButton;
+    SelectColorButton *numberButton;
+    SelectColorButton *reservedButton;
+    SelectColorButton *stringButton;
+    SelectColorButton *unusedButton;
 };
 
 
@@ -82,6 +136,7 @@ public:
     explicit PreferencesDialog(QWidget *parent = 0);
     void initFromPreferences(Preferences *);
     void applyPreferences(Preferences *);
+    void cancelPreferences(Preferences *);
 
 private:
     QTabWidget *tabWidget;
@@ -124,11 +179,31 @@ public:
     int editorTabWidth() { return settings->value("editor/tabWidth", 4).toInt(); }
     void setEditorTabWidth(int width) { settings->setValue("editor/tabWidth", width); }
 
+    bool editorShowLineNumbers() { return settings->value("editor/showLineNumbers", false).toBool(); }
+    void setEditorShowLineNumbers(bool showLineNumbers) { settings->setValue("editor/showLineNumbers", showLineNumbers); }
+
+    // Syntax Highlighting
+
     bool editorDoSyntaxHighlighting() { return settings->value("editor/doSyntaxHighlighting", true).toBool(); }
     void setEditorDoSyntaxHighlighting(bool doSyntaxHighlight) { settings->setValue("editor/doSyntaxHighlighting", doSyntaxHighlight); }
 
-    bool editorShowLineNumbers() { return settings->value("editor/showLineNumbers", false).toBool(); }
-    void setEditorShowLineNumbers(bool showLineNumbers) { settings->setValue("editor/showLineNumbers", showLineNumbers); }
+    QColor editorCommentColor() { return settings->value("editor/commentColor", QColor(Qt::blue)).value<QColor>(); }
+    void setEditorCommentColor(QColor commentColor) { settings->setValue("editor/commentColor", commentColor); }
+
+    QColor editorFunctionColor() { return settings->value("editor/functionColor", QColor(Qt::darkGreen)).value<QColor>(); }
+    void setEditorFunctionColor(QColor functionColor) { settings->setValue("editor/functionColor", functionColor); }
+
+    QColor editorNumberColor() { return settings->value("editor/numberColor", QColor(Qt::red)).value<QColor>(); }
+    void setEditorNumberColor(QColor numberColor) { settings->setValue("editor/numberColor", numberColor); }
+
+    QColor editorReservedColor() { return settings->value("editor/reservedColor", QColor(Qt::magenta)).value<QColor>(); }
+    void setEditorReservedColor(QColor reservedColor) { settings->setValue("editor/reservedColor", reservedColor); }
+
+    QColor editorStringColor() { return settings->value("editor/stringColor", QColor(Qt::red)).value<QColor>(); }
+    void setEditorStringColor(QColor stringColor) { settings->setValue("editor/stringColor", stringColor); }
+
+    QColor editorUnusedColor() { return settings->value("editor/unusedColor", QColor(Qt::darkGray)).value<QColor>(); }
+    void setEditorUnusedColor(QColor unusedColor) { settings->setValue("editor/unusedColor", unusedColor); }
 
     // Log
 

@@ -17,11 +17,9 @@ Editor::Editor(MainWindow *parent) : QPlainTextEdit(parent), parent(parent)
     editorPreferences = new Preferences();
 
     showLineNumbers = editorPreferences->editorShowLineNumbers();
-
-    Highlighter *h = new Highlighter(document());
-    Q_UNUSED(h);
-
     lineNumberArea = new LineNumberArea(this);
+
+    highlighter = new Highlighter(document());
 
     CHECKED_CONNECT(this, &Editor::blockCountChanged, this, &Editor::updateLineNumberAreaWidth);
     CHECKED_CONNECT(this, &QPlainTextEdit::updateRequest, this, &Editor::updateLineNumberArea);

@@ -3,8 +3,6 @@
 #include <QtDebug>
 
 #include "audio.h"
-#include "editor.h"
-#include "highlighter.h"
 #include "mainwindow.h"
 #include "rtcmixlogview.h"
 #include "preferences.h"
