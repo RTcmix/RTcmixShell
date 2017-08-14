@@ -148,6 +148,7 @@ void MainWindow::createEditActions()
     CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QPlainTextEdit::paste);
 
     actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
+    actionShowLineNumbers->setShortcut(Qt::CTRL + Qt::Key_L);
     actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
     actionShowLineNumbers->setCheckable(true);
     actionShowLineNumbers->setChecked(mainWindowPreferences->editorShowLineNumbers());
