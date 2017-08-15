@@ -14,8 +14,7 @@
     "td { font-weight: normal; }" \
     "</style></head>" \
     \
-    "<p>John Gibson, with Brad Garton and Doug Scott</p>" \
-    "<p>using...</p>" \
+    "<p><a href=\"http://john-gibson.com\">John Gibson</a>, with Brad Garton and Doug Scott</p>" \
     \
     "<h4>RTcmix</h4>" \
     "<p>Brad Garton, John Gibson, Doug Scott, David Topper</p>" \
@@ -63,6 +62,8 @@
     \
     "<h4>Thanks</h4>" \
     \
+    "<p class=tight>to <a href=\"http://qt.io\">The Qt Company</a> for their application toolkit</p>" \
+    \
     "<p class=tight>to the <a href=\"http://portaudio.com\">PortAudio</a> project for their audio library</p>" \
     \
     "<p class=tight>to Erik de Castro Lopo for his <a href=\"http://www.mega-nerd.com/libsndfile\">libsndfile</a> sound file library</p>" \
@@ -74,9 +75,7 @@
     \
     "<p class=tight>to <a href=\"http://ldesoras.free.fr\">Laurent de Soras</a> for his FFTReal class" \
     \
-    "<p class=tight>to Juha Nieminen and Joel Yliluoma for their <a href=\"http://warp.povusers.org/FunctionParser\">FunctionParser</a> library" \
-    \
-    "<p class=tight>&nbsp;</p>"
+    "<p class=tight>to Juha Nieminen and Joel Yliluoma for their <a href=\"http://warp.povusers.org/FunctionParser\">FunctionParser</a> library"
 
 
 #endif // CREDITS_H
