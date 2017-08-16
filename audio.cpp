@@ -86,16 +86,20 @@ Audio::Audio()
     }
 }
 
+#include <QMessageBox>
+#include <QCoreApplication>
 Audio::~Audio()
 {
     if (portAudioInitialized) {
         PaError err = Pa_CloseStream(stream);
         if (err != paNoError) {
-            qWarning("Pa_CloseStream error: `%s'", Pa_GetErrorText(err));
+            const QString msg = QString(tr("Error closing audio device\n(Pa_CloseStream: %1)")).arg(Pa_GetErrorText(err));
+            warnAlert(nullptr, msg);
         }
         err = Pa_Terminate();
         if (err != paNoError) {
-            qWarning("Pa_Terminate error: `%s'", Pa_GetErrorText(err));
+            const QString msg = QString(tr("Error closing audio device\n(Pa_Terminate: %1)")).arg(Pa_GetErrorText(err));
+            warnAlert(nullptr, msg);
         }
     }
     if (rtcmixInitialized)
@@ -112,7 +116,8 @@ int Audio::initializeAudio()
     // Initialize
     PaError err = Pa_Initialize();
     if (err != paNoError) {
-        qWarning("Pa_Initialize error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+        const QString msg = QString(tr("Error initializing audio system\n(Pa_Initialize: %1)")).arg(Pa_GetErrorText(err));
+        warnAlert(nullptr, msg);
         return -1;
     }
     portAudioInitialized = true;
@@ -151,26 +156,16 @@ int Audio::initializeAudio()
                                    this);
     }
     if (err != paNoError) {
-        qWarning("Error opening audio device: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+        const QString msg = QString(tr("Error opening audio device\n(Pa_OpenStream: %1)")).arg(Pa_GetErrorText(err));
+        warnAlert(nullptr, msg);
         return -1;
     }
-
-#ifdef NOTNOW
-    // FIXME: not sure we should do it this way
-    audioPreferences->setAudioInputDeviceID(inputDeviceID);
-    audioPreferences->setAudioOutputDeviceID(outputDeviceID);
-    audioPreferences->setAudioSamplingRate(samplingRate);
-    audioPreferences->setAudioNumInputChannels(numInChannels);
-    audioPreferences->setAudioNumOutputChannels(numOutChannels);
-    audioPreferences->setAudioBufferSize(bufferSize);
-    audioPreferences->setAudioNumBuses(busCount);
-#endif
 
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
     transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 
-    qDebug("Audio initialized (srate=%d, nchans=%d, bufsize=%d)", int(samplingRate), numOutChannels, bufferSize);
+//    qDebug("Audio initialized (srate=%d, nchans=%d, bufsize=%d)", int(samplingRate), numOutChannels, bufferSize);
     return 0;
 }
 
@@ -179,10 +174,11 @@ int Audio::startAudio()
     if (portAudioInitialized && stream != NULL) {
         PaError err = Pa_StartStream(stream);
         if (err != paNoError) {
-            qWarning("Pa_StartStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+            const QString msg = QString(tr("Error starting audio\n(Pa_StartStream: %1)")).arg(Pa_GetErrorText(err));
+            warnAlert(nullptr, msg);
             return -1;
         }
-        qDebug("Pa_StartStream returned noerr");
+//        qDebug("Pa_StartStream returned noerr");
     }
     return 0;
 }
@@ -192,7 +188,8 @@ int Audio::stopAudio()
     if (portAudioInitialized && stream != NULL) {
         PaError err = Pa_StopStream(stream);
         if (err != paNoError) {
-            qWarning("Pa_StopStream error: `%s'", Pa_GetErrorText(err));    // FIXME: pop alert instead
+            const QString msg = QString(tr("Error stopping audio\n(Pa_StopStream: %1)")).arg(Pa_GetErrorText(err));
+            warnAlert(nullptr, msg);
             return -1;
         }
     }
@@ -238,7 +235,7 @@ int Audio::memberCallback(
             else
                 failCount++;
             if (failCount > 0) {
-qDebug("audio callback: ring buffer write not available (1 time)");
+//qDebug("audio callback: ring buffer write not available (1 time)");
                 failCount = 0;
 //                break;
             }
@@ -274,7 +271,8 @@ int Audio::initializeRTcmix()
     // initialize RTcmix
     int status = RTcmix_init();
     if (status != 0) {
-        qWarning("RTcmix_init returned error (%d)", status);
+        const QString msg = QString(tr("Error initializing RTcmix\n(RTcmix_init: %1)")).arg(status);
+        warnAlert(nullptr, msg);
         return -1;
     }
     rtcmixInitialized = true;
@@ -282,7 +280,8 @@ int Audio::initializeRTcmix()
 
     status = RTcmix_setAudioBufferFormat(AudioFormat_32BitFloat_Normalized, numOutChannels);
     if (status != 0) {
-        qWarning("RTcmix_setAudioBufferFormat returned error (%d)", status);
+        const QString msg = QString(tr("Error configuring RTcmix audio buffer\n(RTcmix_setAudioBufferFormat: %1)")).arg(status);
+        warnAlert(nullptr, msg);
         return -1;
     }
 
@@ -290,11 +289,12 @@ int Audio::initializeRTcmix()
     int takingInput = 0;
     status = RTcmix_setparams(samplingRate, numOutChannels, bufferSize, takingInput, busCount);
     if (status != 0) {
-        qWarning("RTcmix_setparams returned error (%d)", status);
+        const QString msg = QString(tr("Error configuring RTcmix audio parameters\n(RTcmix_setparams: %1)")).arg(status);
+        warnAlert(nullptr, msg);
         return -1;
     }
 
-    qDebug("RTcmix initialized");
+//    qDebug("RTcmix initialized");
     return 0;
 }
 
@@ -326,23 +326,27 @@ bool Audio::startRecording(const QString &fileName)
     else if (fileName.endsWith(".aif") || fileName.endsWith(".aiff"))
         sfinfo.format = SF_FORMAT_AIFF | SF_FORMAT_FLOAT;
     else {
-        qDebug("startRecording: invalid sound file name extension (must be \".wav\", \".aif\", or \".aiff\")");
+        const QString msg = QString(tr("Invalid sound file name extension (must be \".wav\", \".aif\", or \".aiff\""));
+        warnAlert(nullptr, msg);
         return false;
     }
     if (!sf_format_check(&sfinfo)) {
-        qDebug("startRecording: invalid sound file format requested");
+        const QString msg = QString(tr("Invalid sound file format requested (startRecording)"));
+        warnAlert(nullptr, msg);
         return false;
     }
 
     recordFile = sf_open(fname, SFM_WRITE, &sfinfo);
     if (recordFile == NULL) {
-        qDebug("startRecording: sf_open returned NULL (%s)", sf_strerror(recordFile));
+        const QString msg = QString(tr("Error opening sound file for recording\n(startRecording: sf_open returned NULL (%2))")).arg(sf_strerror(recordFile));
+        warnAlert(nullptr, msg);
         return false;
     }
 
     if (nowRecording) {
         sf_close(recordFile);
-        qDebug("startRecording called while already recording!");
+        const QString msg = QString(tr("Error: starting recording while recording already in progress"));
+        warnAlert(nullptr, msg);
         return false;
     }
 
@@ -375,7 +379,8 @@ int availableOutputDeviceIDs(QVector<int> &idList)
 {
     int numDevices = Pa_GetDeviceCount();
     if (numDevices < 0) {
-        qWarning("availableOutputDeviceIDs: no device IDs discovered");    // FIXME: pop alert instead
+        const QString msg = QString(QObject::tr("Error finding available audio output devices\n(availableOutputDeviceIDs: no device IDs discovered)"));
+        warnAlert(nullptr, msg);
         return -1;
     }
 
@@ -384,7 +389,8 @@ int availableOutputDeviceIDs(QVector<int> &idList)
     for (int id = 0; id < numDevices; id++) {
         deviceInfo = Pa_GetDeviceInfo(id);
         if (deviceInfo == NULL) {
-            qWarning("availableOutputDeviceIDs: can't get info for device %d", id);    // FIXME: pop alert instead
+            const QString msg = QString(QObject::tr("Error getting information for audio output device %1\n(availableOutputDeviceIDs)")).arg(id);
+            warnAlert(nullptr, msg);
             return -1;
         }
         if (deviceInfo->maxOutputChannels > 0) {
@@ -414,7 +420,8 @@ int deviceIDFromName(const QString &name)
     for (int id = 0; id < numDevices; id++) {
         deviceInfo = Pa_GetDeviceInfo(id);
         if (deviceInfo == NULL) {
-            qWarning("deviceIDFromName: can't get info for device %d", id);    // FIXME: pop alert instead
+            const QString msg = QString(QObject::tr("Error getting information for audio device %1\n(deviceIDFromName)")).arg(id);
+            warnAlert(nullptr, msg);
             return -1;
         }
         if (deviceInfo->name == name)
@@ -429,7 +436,8 @@ int deviceNameFromID(const int deviceID, QString &name)
 {
     const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(deviceID);
     if (deviceInfo == NULL) {
-        qWarning("deviceNameFromID: can't get info for device %d", deviceID);    // FIXME: pop alert instead
+        const QString msg = QString(QObject::tr("Error getting information for audio device %1\n(deviceNameFromID)")).arg(deviceID);
+        warnAlert(nullptr, msg);
         return -1;
     }
     name = deviceInfo->name;

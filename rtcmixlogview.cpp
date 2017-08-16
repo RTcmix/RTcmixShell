@@ -12,7 +12,7 @@
 // from a timer in the main thread. The buffer is a single block comprising many
 // equal-sized strings. Usually, these won't be filled to capacity.
 
-#define RTCMIX_PRINT_DEBUG
+//#define RTCMIX_PRINT_DEBUG
 
 void rtcmixPrintCallback(const char *printBuffer, void *inContext);
 

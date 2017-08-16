@@ -20,4 +20,6 @@ QT_END_NAMESPACE
 
 MainWindow *getMainWindow();
 
+void warnAlert(QWidget *, const QString &);
+
 #endif // UTILS_H

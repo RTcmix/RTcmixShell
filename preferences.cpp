@@ -158,8 +158,10 @@ void AudioTab::initFromPreferences(Preferences *prefs)
             samplingRateMenu->addItem(s);
         }
     }
-    else
-        qDebug("init: no valid sampling rates for this device (%d chans)", numChans);
+    else {
+        const QString msg = QString(tr("No valid sampling rates for audio device %1\n(initFromPreferences)")).arg(deviceID);
+        warnAlert(nullptr, msg);
+    }
     str = QString::number(prefs->audioSamplingRate());
     index = samplingRateMenu->findText(str);
     samplingRateMenu->setCurrentIndex(index);
@@ -174,8 +176,10 @@ void AudioTab::initFromPreferences(Preferences *prefs)
             bufferSizeMenu->addItem(s);
         }
     }
-    else
-        qDebug("init: no valid buffer sizes for this device");
+    else {
+        const QString msg = QString(tr("No valid buffer sizes for audio device %1\n(initFromPreferences)")).arg(deviceID);
+        warnAlert(nullptr, msg);
+    }
     str = QString::number(prefs->audioBufferSize());
     index = bufferSizeMenu->findText(str);
     bufferSizeMenu->setCurrentIndex(index);
@@ -279,8 +283,10 @@ void AudioTab::conformValuesToSelectedDevice(int outputDeviceMenuID)
             index = 0;
         samplingRateMenu->setCurrentIndex(index);
     }
-    else
-        qDebug("conform: no valid sampling rates for this device (%d chans)", numChans);
+    else {
+        const QString msg = QString(tr("No valid sampling rates for audio device %1\n(conformValuesToSelectedDevice)")).arg(deviceID);
+        warnAlert(nullptr, msg);
+    }
 
     // Update buffer sizes
     QVector<int> bufferSizes;
@@ -297,8 +303,10 @@ void AudioTab::conformValuesToSelectedDevice(int outputDeviceMenuID)
             index = 0;
         bufferSizeMenu->setCurrentIndex(index);
     }
-    else
-        qDebug("conform: no valid buffer sizes for this device");
+    else {
+        const QString msg = QString(tr("No valid buffer sizes for audio device %1\n(conformValuesToSelectedDevice)")).arg(deviceID);
+        warnAlert(nullptr, msg);
+    }
 }
 
 void AudioTab::cancelPreferences(Preferences *prefs)
@@ -754,10 +762,10 @@ void Preferences::showPreferencesDialog()
 void Preferences::reportError()
 {
     if (settings->status() == QSettings::AccessError) {
-        qDebug("Access error reading settings file");
+        warnAlert(nullptr, tr("Access error reading preferences file"));
     }
     else if (settings->status() == QSettings::FormatError) {
-        qDebug("Your settings file is corrupted; using defaults.");
+        warnAlert(nullptr, tr("Preferences file appears to be corrupted. Using defaults."));
     }
 }
 

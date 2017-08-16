@@ -692,7 +692,7 @@ void MainWindow::record()
     QString fileName;
     if (!chooseRecordFilename(fileName))
         return;
-    qDebug() << "recording into file:" << fileName;
+//    qDebug() << "recording into file:" << fileName;
     if (!playing)
         playScore();
     if (!recording) {
@@ -701,7 +701,7 @@ void MainWindow::record()
         actionRecord->setEnabled(false);
         recordButton->setEnabled(false);
     }
-    qDebug("returned from startRecording");
+//    qDebug("returned from startRecording");
 }
 
 void MainWindow::debug()

@@ -17,7 +17,7 @@ RecordWorker::~RecordWorker()
 
 void RecordWorker::record()
 {
-qDebug("entering RecordWorker::record()");
+//qDebug("entering RecordWorker::record()");
 int totsampswritten = 0;
     // NB: This will write a total number of frames that is evenly divisible by the audio block size
     while (keepRecording) {
@@ -34,9 +34,11 @@ totsampswritten += sampsRead;
         }
         //sf_write_sync(outFile);  messes up playback. call less frequently, or not at all?
     }
-    if (sf_close(outFile) != 0)
-        qDebug("RecordWorker::record(): sf_close error: %s", sf_strerror(outFile));
-qDebug("finished recording - frames written: %d", totsampswritten / 2);
+    if (sf_close(outFile) != 0) {
+        const QString msg = QString(tr("Error closing recorded sound file\n(RecordWorker::record: sf_close: %1)")).arg(sf_strerror(outFile));
+        warnAlert(nullptr, msg);
+    }
+//qDebug("finished recording - frames written: %d", totsampswritten / 2);
 
     emit finished();
 }
