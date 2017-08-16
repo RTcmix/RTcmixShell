@@ -41,6 +41,8 @@ build_all:!build_pass {
 target.path = build
 INSTALLS += target
 
+ICON = RTcmixShell.icns
+
 DEPENDPATH += $$PWD/lib/
 INCLUDEPATH += $$PWD/
 
@@ -50,9 +52,9 @@ else:macx: LIBS += -L$$PWD/lib/ -lrtcmix_embedded
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lportaudio
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lportaudio
-else:unix: LIBS += -L$$PWD/lib/ -lportaudio
+else:macx: LIBS += -L$$PWD/lib/ -lportaudio
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lsndfile
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lsndfile
-else:unix: LIBS += -L$$PWD/lib/ -lsndfile
+else:macx: LIBS += -L$$PWD/lib/ -lsndfile
 
