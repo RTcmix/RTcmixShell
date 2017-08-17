@@ -17,7 +17,8 @@ HEADERS         = audio.h \
                   RTcmix_API.h \
                   rtcmixlogview.h \
                   sndfile.h \
-                  utils.h
+                  utils.h \
+    myapp.h
 
 SOURCES         = audio.cpp \
                   editor.cpp \

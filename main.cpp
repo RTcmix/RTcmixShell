@@ -50,8 +50,8 @@
 
 #include "audio.h"
 #include "mainwindow.h"
+#include "myapp.h"
 
-#include <QApplication>
 #include <QCommandLineParser>
 #include <QCommandLineOption>
 
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 {
     Q_INIT_RESOURCE(RTcmixShell);
 
-    QApplication a(argc, argv);
+    MyApplication theApp(argc, argv);
     QCoreApplication::setOrganizationName(APP_ORGANIZATION_NAME);
     QCoreApplication::setOrganizationDomain(APP_ORGANIZATION_DOMAIN);
     QCoreApplication::setApplicationName(APP_NAME);
@@ -74,9 +74,10 @@ int main(int argc, char *argv[])
     parser.addHelpOption();
     parser.addVersionOption();
     parser.addPositionalArgument("file", "The file to open.");
-    parser.process(a);
+    parser.process(theApp);
 
     MainWindow mw;
+    theApp.setMainWindow(&mw);
 
     //   if (!mw.loadFile(parser.positionalArguments().value(0, QLatin1String(":/starter.sco"))))
     if (!mw.loadFile(parser.positionalArguments().value(0)))
@@ -84,5 +85,5 @@ int main(int argc, char *argv[])
 
     mw.show();
 
-    return a.exec();
+    return theApp.exec();
 }
