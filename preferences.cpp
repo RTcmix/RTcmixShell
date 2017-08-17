@@ -345,16 +345,10 @@ EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
     CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontFamily);
 
     editorFontSizeMenu = new QComboBox;
-    editorFontSizeMenu->setEditable(true);
-    QList<int> standardSizes = QFontDatabase::standardSizes();
-    // add 16 to the menu, if it's not there
-    if (standardSizes.indexOf(16) == -1) {  // doesn't exist
-        int index = standardSizes.indexOf(18);
-        if (index > -1)
-            standardSizes.insert(index, 16);
-    }
-    foreach (int size, standardSizes)
-        editorFontSizeMenu->addItem(QString::number(size));
+    static const int fontSizes[] = { 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 40, 48, 64, 72, 96, 128, 192 };
+    const int len = sizeof(fontSizes) / sizeof(fontSizes[0]);
+    for (int i = 0; i < len; i++)
+        editorFontSizeMenu->addItem(QString::number(fontSizes[i]));
     CHECKED_CONNECT(editorFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontSize);
 
     editorTabWidthSpin = new QSpinBox;
@@ -365,9 +359,8 @@ EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
     CHECKED_CONNECT(logFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontFamily);
 
     logFontSizeMenu = new QComboBox;
-    logFontSizeMenu->setEditable(true);
-    foreach (int size, standardSizes)
-        logFontSizeMenu->addItem(QString::number(size));
+    for (int i = 0; i < len; i++)
+        logFontSizeMenu->addItem(QString::number(fontSizes[i]));
     CHECKED_CONNECT(logFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontSize);
 
     logLinkFamily = new QCheckBox(tr("Always set log font family to editor font"));
@@ -661,6 +654,8 @@ void SyntaxHighlightingTab::setUnusedColor(QColor color)
 
 //-------------------------------------------------------------------------------
 
+static int prevTabIndex = 0;
+
 PreferencesDialog::PreferencesDialog(QWidget *parent)
     : QDialog(parent)
 {
@@ -688,6 +683,8 @@ PreferencesDialog::PreferencesDialog(QWidget *parent)
     mainLayout->addWidget(okCancelButtonBox);
     setLayout(mainLayout);
 
+    tabWidget->setCurrentIndex(prevTabIndex);
+
     this->layout()->setSizeConstraint(QLayout::SetFixedSize);
 
     setWindowTitle(tr("RTcmixShell Preferences"));
@@ -712,14 +709,7 @@ void PreferencesDialog::applyPreferences(Preferences *prefs)
     editorTab->applyPreferences(prefs);
     syntaxHighlightingTab->applyPreferences(prefs);
 
-#ifdef NOTYET
-    prefs->setEditorFontName();
-    prefs->setEditorFontSize();
-    prefs->setEditorTabWidth();
-    prefs->setEditorShowLineNumbers();
-    prefs->setLogFontName();
-    prefs->setLogFontSize();
-#endif
+    prevTabIndex = tabWidget->currentIndex();
 }
 
 void PreferencesDialog::cancelPreferences(Preferences *prefs)
@@ -730,6 +720,8 @@ void PreferencesDialog::cancelPreferences(Preferences *prefs)
     audioTab->cancelPreferences(prefs);
     editorTab->cancelPreferences(prefs);
     syntaxHighlightingTab->cancelPreferences(prefs);
+
+    prevTabIndex = tabWidget->currentIndex();
 }
 
 
