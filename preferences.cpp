@@ -133,15 +133,17 @@ void AudioTab::initFromPreferences(Preferences *prefs)
     // output device
     int deviceID = prefs->audioOutputDeviceID();
     QString str;
-    int index = 0;
+    int menuIndex = 0;
     int result = deviceNameFromID(deviceID, str);
     if (result == 0) {
         int idx = outDeviceMenu->findText(str);
         if (idx != -1)
-            index = idx;
+            menuIndex = idx;
     }
-    outDeviceMenu->setCurrentIndex(index);
+    outDeviceMenu->setCurrentIndex(menuIndex);
     deviceID = deviceIDFromName(outDeviceMenu->currentText()); // could've been overridden
+    menuIndex = outDeviceMenu->currentIndex();
+    conformValuesToSelectedDevice(menuIndex);   // so other widget ranges will be set for this device
 
     // output channels
     int numChans = prefs->audioNumOutputChannels();
@@ -163,8 +165,8 @@ void AudioTab::initFromPreferences(Preferences *prefs)
         warnAlert(nullptr, msg);
     }
     str = QString::number(prefs->audioSamplingRate());
-    index = samplingRateMenu->findText(str);
-    samplingRateMenu->setCurrentIndex(index);
+    menuIndex = samplingRateMenu->findText(str);
+    samplingRateMenu->setCurrentIndex(menuIndex);
 
     // buffer size
     QVector<int> bufferSizes;
@@ -181,8 +183,8 @@ void AudioTab::initFromPreferences(Preferences *prefs)
         warnAlert(nullptr, msg);
     }
     str = QString::number(prefs->audioBufferSize());
-    index = bufferSizeMenu->findText(str);
-    bufferSizeMenu->setCurrentIndex(index);
+    menuIndex = bufferSizeMenu->findText(str);
+    bufferSizeMenu->setCurrentIndex(menuIndex);
 
     // buses
     numBusesSpin->setValue(prefs->audioNumBuses());
