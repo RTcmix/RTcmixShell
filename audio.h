@@ -6,7 +6,9 @@
 
 QT_BEGIN_NAMESPACE
 class QString;
+class QTimer;
 QT_END_NAMESPACE
+class MainWindow;
 class RecordThreadController;
 class Preferences;
 
@@ -71,14 +73,25 @@ private:
     int bufferSize;
     int busCount;
 
+    MainWindow *mainWindow;
     PaUtilRingBuffer recordRingBuffer;
     SNDFILE *recordFile;
     float *recordBuffer;
     float *transferBuffer;
     RecordThreadController *recordThreadController;
     std::atomic<bool> nowRecording;
+    std::atomic<bool> detectClipping;
+    int *consecutiveSamps;
+    std::atomic<int> *clippingCounts;
+    QTimer *clippingTimer;
 
     Preferences *audioPreferences;
+
+private slots:
+    void checkClipping();
+
+signals:
+    void didClip(int clipCount);
 
 #ifdef NOTYET   // should move to main window
     // Owned by layout

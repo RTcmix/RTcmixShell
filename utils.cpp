@@ -1,6 +1,7 @@
 
 #include <QApplication>
 #include <QMessageBox>
+#include <QTime>
 #include <QWidget>
 #include "mainwindow.h"
 #include "utils.h"
@@ -23,3 +24,11 @@ void warnAlert(QWidget *parent, const QString &errorText)
     QMessageBox::warning(parent, QCoreApplication::applicationName(), errorText, QMessageBox::Ok, QMessageBox::NoButton);
 }
 
+// adapted from GraehamF answer: https://stackoverflow.com/questions/3752742/how-do-i-create-a-pause-wait-function-using-qt
+void delay(int millisecondsToWait)
+{
+    QTime dieTime = QTime::currentTime().addMSecs(millisecondsToWait);
+    while (QTime::currentTime() < dieTime) {
+        QCoreApplication::processEvents(QEventLoop::AllEvents, 20);
+    }
+}

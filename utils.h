@@ -19,7 +19,7 @@ QT_END_NAMESPACE
         qt_assert_x(Q_FUNC_INFO, "CHECKED_CONNECT failed", __FILE__, __LINE__);
 
 MainWindow *getMainWindow();
-
 void warnAlert(QWidget *, const QString &);
+void delay(int);
 
 #endif // UTILS_H

@@ -8,7 +8,9 @@ HEADERS         = audio.h \
                   credits.h \
                   editor.h \
                   highlighter.h \
+                  led.h \
                   mainwindow.h \
+                  myapp.h \
                   pa_memorybarrier.h \
                   pa_ringbuffer.h \
                   portaudio.h \
@@ -17,8 +19,7 @@ HEADERS         = audio.h \
                   RTcmix_API.h \
                   rtcmixlogview.h \
                   sndfile.h \
-                  utils.h \
-    myapp.h
+                  utils.h
 
 SOURCES         = audio.cpp \
                   editor.cpp \

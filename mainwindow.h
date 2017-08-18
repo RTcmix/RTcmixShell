@@ -13,6 +13,7 @@ class QPlainTextEdit;
 class QTimer;
 QT_END_NAMESPACE
 class Audio;
+class Led;
 class RTcmixLogView;
 class Preferences;
 #include "editor.h"
@@ -36,12 +37,13 @@ protected:
     void closeEvent(QCloseEvent *e) override;
 
 public slots:
-    void stopScore();
     void editorFontFamily(const QString &);
     void editorFontSize(const QString &);
     void editorTabWidth(const int &);
     void logFontFamily(const QString &);
     void logFontSize(const QString &);
+    void stopScore();
+    void showClipping(int);
 
 private slots:
     void about();
@@ -106,6 +108,7 @@ private:
     QPushButton *playButton;
     QPushButton *stopButton;
     QPushButton *recordButton;
+    Led *clippingIndicator;
     QTimer *scoreFinishedTimer;
 
     enum ScorePlayMode {

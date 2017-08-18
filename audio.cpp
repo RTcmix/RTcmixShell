@@ -41,6 +41,7 @@
 #include <QByteArray>
 #include <QDebug>
 #include <QFile>
+#include <QTimer>
 #include <QVector>
 #include <qmath.h>
 #include <qendian.h>
@@ -48,6 +49,7 @@
 #include <math.h>
 
 #include "audio.h"
+#include "mainwindow.h"
 #include "record.h"
 #define EMBEDDEDAUDIO
 #include "RTcmix_API.h"
@@ -56,6 +58,10 @@
 
 // FIXME: Might want to realloc this if numchans changes
 const int ringBufferNumSamps = 1024 * 32;
+
+const int consecutiveFullScaleSamps = 2;
+const int clippingTimerInterval = 50;
+
 
 Audio::Audio()
     : portAudioInitialized(false)
@@ -66,6 +72,10 @@ Audio::Audio()
     , transferBuffer(NULL)
     , recordThreadController(NULL)
     , nowRecording(false)
+    , detectClipping(true)
+    , consecutiveSamps(NULL)
+    , clippingCounts(NULL)
+    , clippingTimer(NULL)
 {
     // This syncs with the MainWindow-owned settings, even though it's a different object.
     audioPreferences = new Preferences();
@@ -78,6 +88,8 @@ Audio::Audio()
     bufferSize = audioPreferences->audioBufferSize();
     busCount = audioPreferences->audioNumBuses();
 
+    mainWindow = getMainWindow();
+
     int result = initializeAudio();
     if (result == 0) {
         result = initializeRTcmix();
@@ -86,8 +98,6 @@ Audio::Audio()
     }
 }
 
-#include <QMessageBox>
-#include <QCoreApplication>
 Audio::~Audio()
 {
     if (portAudioInitialized) {
@@ -108,7 +118,10 @@ Audio::~Audio()
         free(recordBuffer);
     if (transferBuffer)
         free(transferBuffer);
+    delete consecutiveSamps;
+    delete clippingCounts;
     delete recordThreadController;
+    delete clippingTimer;
 }
 
 int Audio::initializeAudio()
@@ -161,6 +174,15 @@ int Audio::initializeAudio()
         return -1;
     }
 
+    consecutiveSamps = new int [numOutChannels];
+    clippingCounts = new std::atomic<int> [numOutChannels];
+    for (int i = 0; i < numOutChannels; i++)
+        consecutiveSamps[i] = clippingCounts[i] = 0;
+
+    clippingTimer = new QTimer(this);
+    CHECKED_CONNECT(clippingTimer, &QTimer::timeout, this, &Audio::checkClipping);
+    CHECKED_CONNECT(this, &Audio::didClip, mainWindow, &MainWindow::showClipping);
+
     recordBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
     transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
@@ -180,11 +202,20 @@ int Audio::startAudio()
         }
 //        qDebug("Pa_StartStream returned noerr");
     }
+
+    if (detectClipping) {
+        if (!clippingTimer->isActive())
+            clippingTimer->start(clippingTimerInterval);
+    }
+
     return 0;
 }
 
 int Audio::stopAudio()
 {
+    if (clippingTimer->isActive())
+        clippingTimer->stop();
+
     if (portAudioInitialized && stream != NULL) {
         PaError err = Pa_StopStream(stream);
         if (err != paNoError) {
@@ -194,6 +225,17 @@ int Audio::stopAudio()
         }
     }
     return 0;
+}
+
+void Audio::checkClipping()
+{
+    int clipCount = 0;
+    for (int c = 0; c < numOutChannels; c++) {
+        clipCount += clippingCounts[c];
+        clippingCounts[c] = 0;
+    }
+    if (clipCount)
+        emit didClip(clipCount);
 }
 
 int Audio::memberCallback(
@@ -238,6 +280,25 @@ int Audio::memberCallback(
     }
 //    qDebug("RTcmix_runAudio called (result=%d, frameCount=%ld, output=%p)", result, frameCount, output);
 #endif
+
+    if (detectClipping) {
+        // This (over-) simple clipping algorithm thinks a consecutive run of full-scale
+        // samples of length >= consecutiveFullScaleSamps indicates clipping, even if
+        // the signal oscillates between -1 and +1. This is per channel.
+        float *sampPtr = (float *) output;
+        for (unsigned long i = 0; i < frameCount; i++) {
+            for (int c = 0; c < numOutChannels; c++) {
+                float samp = fabs(*sampPtr++);
+                if (samp > 0.999)
+                    consecutiveSamps[c]++;
+                else {
+                    if (consecutiveSamps[c] > consecutiveFullScaleSamps)
+                        clippingCounts[c]++;
+                    consecutiveSamps[c] = 0;
+                }
+            }
+        }
+    }
 
     if (nowRecording) {
         int failCount = 0;

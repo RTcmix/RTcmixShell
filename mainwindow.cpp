@@ -3,6 +3,7 @@
 #include <QtDebug>
 
 #include "audio.h"
+#include "led.h"
 #include "mainwindow.h"
 #include "rtcmixlogview.h"
 #include "preferences.h"
@@ -266,6 +267,15 @@ void MainWindow::createToolbars()
     recordButton->setMinimumSize(buttonSize);
     tb->addWidget(recordButton);
     CHECKED_CONNECT(recordButton, &QPushButton::clicked, this, &MainWindow::record);
+
+    tb->addSeparator();
+
+    //QHBoxLayout *clipLayout = new QHBoxLayout();
+    QLabel *clipLabel = new QLabel(tr("Clip"));
+    clippingIndicator = new Led(this);
+    clippingIndicator->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    tb->addWidget(clipLabel);
+    tb->addWidget(clippingIndicator);
 
 #ifdef NOMORE
     // font family/size popups -------------------------------------
@@ -665,6 +675,16 @@ void MainWindow::stopScore()
 #else
     audio->reinitializeRTcmix();
 #endif
+}
+
+void MainWindow::showClipping(int clipCount)
+{
+    (void) clipCount;
+
+    clippingIndicator->setPower(true);
+    delay(100);
+    clippingIndicator->setPower(false);
+    //qDebug("MainWindow::showClipping(%d)", clipCount);
 }
 
 void MainWindow::reinitializeAudio()
