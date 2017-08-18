@@ -219,6 +219,26 @@ int Audio::memberCallback(
     (void) statusFlags;
 #endif
 
+    int result = RTcmix_runAudio(NULL /*input*/, output, frameCount);
+    (void) result;
+#ifdef DEBUG_IN_CALLBACK
+    float *p = (float *)output;
+    bool nonzero = false;
+    for (unsigned long i = 0; i < frameCount; i++) {
+        if (fabs(*p++) > 0.0) {
+            nonzero = true;
+            break;
+        }
+    }
+    if ((callbackCount % 100) == 0) {
+        if (nonzero)
+            qDebug("has sound");
+        else
+            qDebug("20 buffers of silence");
+    }
+//    qDebug("RTcmix_runAudio called (result=%d, frameCount=%ld, output=%p)", result, frameCount, output);
+#endif
+
     if (nowRecording) {
         int failCount = 0;
         float *ptr = (float *) output;
@@ -242,26 +262,6 @@ int Audio::memberCallback(
         }
 //qDebug("audio callback: loop done (inSampCount=%d)", inSampCount);
     }
-
-    int result = RTcmix_runAudio(NULL /*input*/, output, frameCount);
-    (void) result;
-#ifdef DEBUG_IN_CALLBACK
-    float *p = (float *)output;
-    bool nonzero = false;
-    for (unsigned long i = 0; i < frameCount; i++) {
-        if (fabs(*p++) > 0.0) {
-            nonzero = true;
-            break;
-        }
-    }
-    if ((callbackCount % 100) == 0) {
-        if (nonzero)
-            qDebug("has sound");
-        else
-            qDebug("20 buffers of silence");
-    }
-//    qDebug("RTcmix_runAudio called (result=%d, frameCount=%ld, output=%p)", result, frameCount, output);
-#endif
 
     return paContinue;
 }
