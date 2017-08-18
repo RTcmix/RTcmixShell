@@ -437,6 +437,9 @@ bool MainWindow::loadFile(const QString &f)
     str = QString::fromLocal8Bit(data);
     curEditor->setPlainText(str);
     setCurrentFileName(f);
+
+    QDir::setCurrent(QFileInfo(f).dir().path());
+
     return true;
 }
 
