@@ -43,24 +43,23 @@ build_all:!build_pass {
 target.path = build
 INSTALLS += target
 
-win32: RC_ICONS = RTcmixShell.ico
-macx: ICON = RTcmixShell.icns
+win32:RC_ICONS = RTcmixShell.ico
+macx:ICON = RTcmixShell.icns
 
 #DEPENDPATH += $$PWD/lib/
 INCLUDEPATH += $$PWD/
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lrtcmix_embedded
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lrtcmix_embedded
-else:macx: LIBS += -L$$PWD/lib/mac/ -lrtcmix_embedded
-else:unix: LIBS += -L$$PWD/lib/unix/ -lrtcmix_embedded
+else:macx:LIBS += -L$$PWD/lib/mac/ -lrtcmix_embedded
+else:unix:LIBS += -L$$PWD/lib/unix/ -lrtcmix_embedded
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lportaudio
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lportaudio
-else:macx: LIBS += -L$$PWD/lib/mac/ -lportaudio
-else:unix: LIBS += -L$$PWD/lib/unix/ -lportaudio
+else:macx:LIBS += -L$$PWD/lib/mac/ -lportaudio
+else:unix:LIBS += -L$$PWD/lib/unix/ -lportaudio
 
 win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lsndfile
 else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lsndfile
-else:macx: LIBS += -L$$PWD/lib/mac/ -lsndfile
-else:unix: LIBS += -L$$PWD/lib/unix/ -lsndfile
-
+else:macx:LIBS += -L$$PWD/lib/mac/ -lsndfile
+else:unix:LIBS += -L$$PWD/lib/unix/ -lsndfile
