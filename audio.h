@@ -2,6 +2,7 @@
 #ifndef AUDIO_H
 #define AUDIO_H
 
+#include <atomic>
 #include <QObject>
 
 QT_BEGIN_NAMESPACE

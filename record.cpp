@@ -1,3 +1,4 @@
+#include <atomic>
 #include <QDebug>
 #include "record.h"
 

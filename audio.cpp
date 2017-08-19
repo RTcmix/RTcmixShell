@@ -137,13 +137,13 @@ int Audio::initializeAudio()
 
 #ifdef NOTYET
     PaStreamParameters inputParameters;
-    bzero(&inputParameters, sizeof(inputParameters));
+    memset(&inputParameters, 0, sizeof(inputParameters));
     inputParameters.channelCount = numInChannels;
     inputParameters.device = inputDeviceID;
     inputParameters.sampleFormat = paFloat32;
 #endif
     PaStreamParameters outputParameters;
-    bzero(&outputParameters, sizeof(outputParameters));
+    memset(&outputParameters, 0, sizeof(outputParameters));
     outputParameters.channelCount = numOutChannels;
     outputParameters.device = outputDeviceID;
     outputParameters.sampleFormat = paFloat32;
@@ -379,7 +379,7 @@ bool Audio::startRecording(const QString &fileName)
     char *fname = ba.data();
 
     SF_INFO sfinfo;
-    bzero(&sfinfo, sizeof(sfinfo));
+    memset(&sfinfo, 0, sizeof(sfinfo));
     sfinfo.samplerate = samplingRate;
     sfinfo.channels = numOutChannels;
     if (fileName.endsWith(".wav"))
@@ -519,7 +519,7 @@ int maxOutputChannelCount(const int deviceID)
 int availableSamplingRates(const int deviceID, const int numOutputChannels, QVector<int> &rates)
 {
     PaStreamParameters outParams;
-    bzero(&outParams, sizeof(outParams));
+    memset(&outParams, 0, sizeof(outParams));
     outParams.channelCount = numOutputChannels;
     outParams.device = deviceID;
     outParams.sampleFormat = paFloat32;
