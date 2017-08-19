@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
         mw.fileNew();
 
 #ifdef Q_OS_WIN
-    mw.setIcon(QIcon(QString(APP_NAME ".ico")));
+    mw.setWindowIcon(QIcon(APP_NAME ".ico"));
 #endif
 
     mw.show();
