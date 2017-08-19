@@ -43,7 +43,8 @@ build_all:!build_pass {
 target.path = build
 INSTALLS += target
 
-ICON = RTcmixShell.icns
+win32: RC_ICONS = RTcmixShell.ico
+macx: ICON = RTcmixShell.icns
 
 #DEPENDPATH += $$PWD/lib/
 INCLUDEPATH += $$PWD/

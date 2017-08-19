@@ -83,6 +83,10 @@ int main(int argc, char *argv[])
     if (!mw.loadFile(parser.positionalArguments().value(0)))
         mw.fileNew();
 
+#ifdef Q_OS_WIN
+    mw.setIcon(QIcon(QString(APP_NAME ".ico")));
+#endif
+
     mw.show();
 
     return theApp.exec();
