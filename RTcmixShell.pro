@@ -45,18 +45,21 @@ INSTALLS += target
 
 ICON = RTcmixShell.icns
 
-DEPENDPATH += $$PWD/lib/
+#DEPENDPATH += $$PWD/lib/
 INCLUDEPATH += $$PWD/
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lrtcmix_embedded
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lrtcmix_embedded
-else:macx: LIBS += -L$$PWD/lib/ -lrtcmix_embedded
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lrtcmix_embedded
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lrtcmix_embedded
+else:macx: LIBS += -L$$PWD/lib/mac/ -lrtcmix_embedded
+else:unix: LIBS += -L$$PWD/lib/unix/ -lrtcmix_embedded
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lportaudio
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lportaudio
-else:macx: LIBS += -L$$PWD/lib/ -lportaudio
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lportaudio
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lportaudio
+else:macx: LIBS += -L$$PWD/lib/mac/ -lportaudio
+else:unix: LIBS += -L$$PWD/lib/unix/ -lportaudio
 
-win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/release/ -lsndfile
-else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/debug/ -lsndfile
-else:macx: LIBS += -L$$PWD/lib/ -lsndfile
+win32:CONFIG(release, debug|release): LIBS += -L$$PWD/lib/win/release/ -lsndfile
+else:win32:CONFIG(debug, debug|release): LIBS += -L$$PWD/lib/win/debug/ -lsndfile
+else:macx: LIBS += -L$$PWD/lib/mac/ -lsndfile
+else:unix: LIBS += -L$$PWD/lib/unix/ -lsndfile
 
