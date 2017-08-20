@@ -1,0 +1,40 @@
+v1.0b3 (8/??/17)
+	- Complete implementation of prefs dialog.
+	- Optionally show line numbers in left margin of editor.
+	- Added a clipping indicator in the toolbar.
+	- Now has an app icon.
+	- Can now drag a .sco icon onto the app icon to launch the app with
+	  the score, or drag the .sco icon onto the app icon in the Dock while
+	  it's running. (Not such a big deal, since you can already drag a .sco
+	  into the edit window to open it.)
+	- Expanded credits in About box.
+	- Current working directory set to the one containing the most recently
+	  opened score, so that relative rtinput paths can work.
+	- Use the first available audio output device if the one stored in the
+	  preferences file is no longer attached to the system.
+	- If score has fatal syntax errors recognized by RTcmix, don't try to
+	  play it.
+
+v1.0b2 (8/12/17)
+	- Can now save score files.
+	- Save dialog initially points to the user's home directory, instead of
+	  to the app binary's directory.
+	- Stop button destroys RTcmix and recreates it each time, instead of just
+	  flushing the heap.
+	- Log view at bottom of window.
+	- Play/Stop buttons now pushbuttons, offering more definite feedback.
+	  Leaving the text labels in them for now.
+	- Play/Stop buttons now mutually exclusive. Stop is invoked automatically
+	  when score has finished playing.
+	- Option to allow overlapping, rather than exclusive, scores.
+	- Record button starts score and records to a sound file.
+	- Drag a text file or .sco into the editor to open it; drag a wav or aiff
+	  file, or a folder, into the editor to drop its full path at the insertion
+	  point, surrounded by double-quotes.
+	- Print in gray the RTcmix commands that are invalid in this environment:
+	  rtsetparams, load, rtoutput (though rtoutput causes a crash).
+	- Uses a settings file to store state. The Preferences dialog for changing
+	  some of these settings is partially implemented.
+
+v1.0b1 (8/1/17)
+	- Initial test version
