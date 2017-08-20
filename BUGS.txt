@@ -1,0 +1,12 @@
+
+--------------------
+LIMITATIONS
+
+- "include" feature of MinC does not work
+- the DisplayWindow and MouseWindow programs do not work
+- rtoutput doesn't work; use RTcmixShell Record feature instead
+
+--------------------
+BUGS
+
+
