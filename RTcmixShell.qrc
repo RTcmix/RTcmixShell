@@ -1,0 +1,6 @@
+<RCC>
+    <qresource prefix="/">
+        <file>images/mac/record.png</file>
+        <file>images/win/record.png</file>
+    </qresource>
+</RCC>
