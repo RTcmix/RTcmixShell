@@ -5,6 +5,14 @@ LIMITATIONS
 - "include" feature of MinC does not work
 - the DisplayWindow and MouseWindow programs do not work
 - rtoutput doesn't work; use RTcmixShell Record feature instead
+- libdnafuncs (open_dnafile, get_aminoacid, etc.) doesn't work
+- some instruments missing: GRANULATE, NPAN, QPAN, RESYNTH, SROOM,
+  DUMP, LPCPLAY, MMOVE, MOVE, vccm stuff (see WIN_EXCLUDES.txt
+  in wRTcmixlib src)
+- no Python or Perl front end
+- no netplay capability
+- no dso loading; instruments are all compiled in to one monolithic
+  binary. So no need to use the load function to pull them in.
 
 --------------------
 BUGS
