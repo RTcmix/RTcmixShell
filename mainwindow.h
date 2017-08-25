@@ -42,6 +42,7 @@ public slots:
     void editorTabWidth(const int &);
     void logFontFamily(const QString &);
     void logFontSize(const QString &);
+    void fileOpenNoDialog(const QString &);
     void stopScore();
     void showClipping(int);
 

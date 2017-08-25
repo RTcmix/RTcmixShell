@@ -25,7 +25,7 @@ Editor::Editor(MainWindow *parent) : QPlainTextEdit(parent), parent(parent)
     CHECKED_CONNECT(this, &QPlainTextEdit::updateRequest, this, &Editor::updateLineNumberArea);
     CHECKED_CONNECT(document(), &QTextDocument::modificationChanged, this, &QWidget::setWindowModified);
     CHECKED_CONNECT(this, &QPlainTextEdit::cursorPositionChanged, this, &Editor::cursorPositionChanged);
-    CHECKED_CONNECT(this, &Editor::loadFile, parent, &MainWindow::loadFile);
+    CHECKED_CONNECT(this, &Editor::loadFile, parent, &MainWindow::fileOpenNoDialog);
 
     updateLineNumberAreaWidth(0);
 
@@ -77,10 +77,11 @@ void Editor::resizeEvent(QResizeEvent *e)
 {
     QPlainTextEdit::resizeEvent(e);
 
-    if (showLineNumbers) {
-        QRect cr = contentsRect();
-        lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), lineNumberAreaWidth(), cr.height()));
-    }
+    int width = 0;
+    if (showLineNumbers)
+        width = lineNumberAreaWidth();
+    QRect cr = contentsRect();
+    lineNumberArea->setGeometry(QRect(cr.left(), cr.top(), width, cr.height()));
 }
 
 void Editor::lineNumberAreaPaintEvent(QPaintEvent *event)

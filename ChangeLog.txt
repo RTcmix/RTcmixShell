@@ -1,4 +1,11 @@
-v1.0b3 (8/??/17)
+v1.0b4 (8/xx/17)
+	- Fix bug: after turning line numbers off, the area that used to be
+	  underneath the line number strip would not show the text edit cursor
+	  or let you select text.
+	- Fix bug: edit score, drag new file in from Finder => replaces dirty
+	  score without giving user a chance to save.
+
+v1.0b3 (8/22/17)
 	- Complete implementation of prefs dialog.
 	- Optionally show line numbers in left margin of editor.
 	- Added a clipping indicator in the toolbar.

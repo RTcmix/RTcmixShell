@@ -453,6 +453,16 @@ bool MainWindow::loadFile(const QString &f)
     return true;
 }
 
+void MainWindow::fileOpenNoDialog(const QString &fn)
+{
+    if (maybeSave()) {
+        if (loadFile(fn))
+            statusBar()->showMessage(tr("Opened \"%1\"").arg(QDir::toNativeSeparators(fn)));
+        else
+            statusBar()->showMessage(tr("Could not open \"%1\"").arg(QDir::toNativeSeparators(fn)));
+    }
+}
+
 void MainWindow::fileOpen()
 {
     if (maybeSave()) {
