@@ -121,7 +121,8 @@ Highlighter::Highlighter(QTextDocument *parent)
     hashLineCommentFormat.setForeground(syntaxHighlightingPreferences->editorCommentColor());
     rule.type = CommentRule;
     rule.format = hashLineCommentFormat;
-    rule.pattern = QRegularExpression("#[^\n]*");
+    // FIXME: avoid matching pitch letter format, e.g., "G#4" -- still doesn't work yet
+    rule.pattern = QRegularExpression("[^ABCDEFG]*#[^\n]*");
     highlightingRules.append(rule);
 
     // 8. C-style multiline comments
