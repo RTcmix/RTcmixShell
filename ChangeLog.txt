@@ -4,6 +4,8 @@ v1.0b4 (8/xx/17)
 	  or let you select text.
 	- Fix bug: edit score, drag new file in from Finder => replaces dirty
 	  score without giving user a chance to save.
+	- RTcmix internal Minc fixes installed, affecting not completely cleaning
+	  up after certain errors.
 
 v1.0b3 (8/22/17)
 	- Complete implementation of prefs dialog.
