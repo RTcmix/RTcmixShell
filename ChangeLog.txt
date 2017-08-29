@@ -1,4 +1,4 @@
-v1.0b4 (8/xx/17)
+v1.0b4 (8/29/17)
 	- Fix bug: after turning line numbers off, the area that used to be
 	  underneath the line number strip would not show the text edit cursor
 	  or let you select text.
@@ -6,6 +6,7 @@ v1.0b4 (8/xx/17)
 	  score without giving user a chance to save.
 	- RTcmix internal Minc fixes installed, affecting not completely cleaning
 	  up after certain errors.
+	- Cosmetic work on clipping indicator.
 
 v1.0b3 (8/22/17)
 	- Complete implementation of prefs dialog.

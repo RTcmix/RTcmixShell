@@ -58,7 +58,7 @@
 #define APP_ORGANIZATION_NAME       "RTcmix"
 #define APP_ORGANIZATION_DOMAIN     "rtcmix.org"
 #define APP_NAME                    "RTcmixShell"
-#define APP_VERSION_STR             "v1.0b4"
+#define APP_VERSION_STR             "v1.0b5"
 
 int main(int argc, char *argv[])
 {

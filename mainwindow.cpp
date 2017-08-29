@@ -158,7 +158,7 @@ void MainWindow::createEditActions()
     CHECKED_CONNECT(actionShowLineNumbers, &QAction::triggered, curEditor, &Editor::xableLineNumbers);
 
     actionPrefs = new QAction(tr("Pre&ferences"), this);
-    actionPrefs->setShortcut(QKeySequence::Preferences);
+    actionPrefs->setShortcut(QKeySequence::Preferences);    // but this shows nothing on Windows!
     actionPrefs->setStatusTip(tr("Edit application settings"));
     CHECKED_CONNECT(actionPrefs, &QAction::triggered, mainWindowPreferences, &Preferences::showPreferencesDialog);
 
