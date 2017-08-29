@@ -7,7 +7,7 @@
 #include <QtDebug>
 
 // Adapted from VRonin answer: https://forum.qt.io/topic/73724/led-like-buttons-widgets/2
-// NB: this is hacked to work for our specific task -- not ideal
+// NB: this is hacked to work for our specific context -- placement within a toolbar.
 class Led : public QWidget {
     Q_OBJECT
     Q_PROPERTY(bool power READ power WRITE setPower NOTIFY powerChanged)
@@ -22,7 +22,7 @@ public:
     }
 
     QSize sizeHint() const override {
-        return QSize(12, 12);
+        return QSize(24, 16);
     }
 
     bool power() const
@@ -50,14 +50,17 @@ protected:
         QPainter ledPainter(this);
         QPen pen;
         pen.setColor(Qt::darkGray);
-        pen.setWidth(2);
+        pen.setWidth(1);
         ledPainter.setPen(pen);
         if (m_power)
             ledPainter.setBrush(Qt::red);
         else
             ledPainter.setBrush(Qt::NoBrush);
-//        qDebug() << "paintEvent: size:" << size() << "rect:" << rect();
-        ledPainter.drawRect(rect());
+        // qDebug() << "paintEvent: size:" << size() << "rect:" << rect();
+        QRect r = QRect(rect());
+        r.setSize(QSize(13, 13));
+        //r.translate(0, -1);   // causes top edge to disappear
+        ledPainter.drawRect(r);
     }
 
 private:

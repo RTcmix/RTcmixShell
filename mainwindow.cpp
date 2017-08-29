@@ -268,16 +268,25 @@ void MainWindow::createToolbars()
     tb->addWidget(recordButton);
     CHECKED_CONNECT(recordButton, &QPushButton::clicked, this, &MainWindow::record);
 
-    tb->addSeparator();
+//    tb->addSeparator();
 
-    //QHBoxLayout *clipLayout = new QHBoxLayout();
-    QLabel *clipLabel = new QLabel(tr("Clip"));
+    // This forces the clipping indicator to be right-aligned.
+    QWidget *spacer = new QWidget();
+    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    tb->addWidget(spacer);
+
     clippingIndicator = new Led(this);
     clippingIndicator->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    clippingIndicator->setToolTip(tr("Clipping indicator"));
+#ifdef NOMORE
+    QLabel *clipLabel = new QLabel(tr("clip"));
     tb->addWidget(clipLabel);
+#endif
     tb->addWidget(clippingIndicator);
 
 #ifdef NOMORE
+    // This was moved into prefs dlog, but it shows how to add a second toolbar.
+
     // font family/size popups -------------------------------------
 
     tb = addToolBar(tr("Text"));
@@ -287,18 +296,6 @@ void MainWindow::createToolbars()
     comboFont = new QFontComboBox(tb);
     tb->addWidget(comboFont);
     CHECKED_CONNECT(comboFont, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textFamily);
-
-    comboSize = new QComboBox(tb);
-    comboSize->setObjectName("comboSize");
-    tb->addWidget(comboSize);
-    comboSize->setEditable(true);
-
-    const QList<int> standardSizes = QFontDatabase::standardSizes();
-    foreach (int size, standardSizes)
-        comboSize->addItem(QString::number(size));
-    comboSize->setCurrentIndex(standardSizes.indexOf(QApplication::font().pointSize()));
-
-    CHECKED_CONNECT(comboSize, QOverload<const QString &>::of(&QComboBox::activated), this, &MainWindow::textSize);
 #endif
 }
 
