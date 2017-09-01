@@ -188,7 +188,7 @@ void MainWindow::createScoreActions()
     actionAllowOverlappingScores->setCheckable(true);
     CHECKED_CONNECT(actionAllowOverlappingScores, &QAction::triggered, this, &MainWindow::setScorePlayMode);
 
-    actionClearLog = new QAction(tr("&Clear"), this);
+    actionClearLog = new QAction(tr("&Clear Log"), this);
     actionClearLog->setShortcut(Qt::CTRL + Qt::Key_B);
     actionClearLog->setStatusTip(tr("Clear the score report area at the bottom of the window"));
     CHECKED_CONNECT(actionClearLog, &QAction::triggered, rtcmixLogView, &RTcmixLogView::clearLog);
@@ -272,7 +272,9 @@ void MainWindow::createToolbars()
 
     // This forces the clipping indicator to be right-aligned.
     QWidget *spacer = new QWidget();
-    spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    // but this interferes with ability to drag the window in this spot.
+    // spacer->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    spacer->setMinimumWidth(6);
     tb->addWidget(spacer);
 
     clippingIndicator = new Led(this);

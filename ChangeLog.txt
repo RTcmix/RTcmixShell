@@ -1,3 +1,8 @@
+v1.0b5 (9/1/17)
+	- Rename Score > Clear to Clear Log.
+	- RTcmix internal Minc and other fixes.
+	- Inclusion of GRANULATE instrument.
+
 v1.0b4 (8/29/17)
 	- Fix bug: after turning line numbers off, the area that used to be
 	  underneath the line number strip would not show the text edit cursor
