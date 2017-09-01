@@ -18,11 +18,11 @@
 	<key>CFBundleIdentifier</key>
 	<string>org.rtcmix.RTcmixShell</string>
 	<key>CFBundleGetInfoString</key>
-	<string>v1.0b5, Copyright 2017 John Gibson</string>
+	<string>v1.0b6, Copyright 2017 John Gibson</string>
 	<key>CFBundleIconFile</key>
 	<string>RTcmixShell.icns</string>
 	<key>CFBundleLongVersionString</key>
-	<string>RTcmixShell v1.0b5, Copyright 2017 John Gibson</string>
+	<string>RTcmixShell v1.0b6, Copyright 2017 John Gibson</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>

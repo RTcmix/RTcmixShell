@@ -1,3 +1,5 @@
+v1.0b6 (9/x/17)
+
 v1.0b5 (9/1/17)
 	- Rename Score > Clear to Clear Log.
 	- RTcmix internal Minc and other fixes.
