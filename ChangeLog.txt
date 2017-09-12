@@ -1,4 +1,8 @@
 v1.0b6 (9/x/17)
+	- Support audio input. The number of input channels must be
+	  the same as the number of output channels, due to an RTcmix
+	  limitation. This feature might be a bit shaky for a while.
+	- Use MPLACE, instead of PLACE, and friends
 
 v1.0b5 (9/1/17)
 	- Rename Score > Clear to Clear Log.
