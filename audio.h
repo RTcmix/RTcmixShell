@@ -17,10 +17,14 @@ class Preferences;
 #include "pa_ringbuffer.h"
 #include "sndfile.h"
 
+int availableInputDeviceIDs(QVector<int> &);
 int availableOutputDeviceIDs(QVector<int> &);
+#ifdef UNUSED
 int defaultOutputDevice();
+#endif
 int deviceIDFromName(const QString &);
 int deviceNameFromID(const int, QString &);
+int maxInputChannelCount(const int);
 int maxOutputChannelCount(const int);
 int availableSamplingRates(const int, const int, QVector<int> &);
 int availableBufferSizes(const int, QVector<int> &);

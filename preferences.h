@@ -66,17 +66,21 @@ public:
     void cancelPreferences(Preferences *);
 
 private slots:
-    void conformValuesToSelectedDevice(int);
+    void conformValuesToSelectedInputDevice(int);
+    void conformValuesToSelectedOutputDevice(int);
 
 private:
     void initDeviceMenus();
 
+    QComboBox *inDeviceMenu;
     QComboBox *outDeviceMenu;
     QComboBox *samplingRateMenu;
+    QSpinBox *inChannelsSpin;
     QSpinBox *outChannelsSpin;
     QComboBox *bufferSizeMenu;
     QSpinBox *numBusesSpin;
     QCheckBox *warnOverlappingScores;
+    QVector<int> inputDeviceList;
     QVector<int> outputDeviceList;
     bool initing;
 };
@@ -252,7 +256,7 @@ public:
     double audioSamplingRate() { return settings->value("audio/samplingRate", 44100.0).toDouble(); }
     void setAudioSamplingRate(double rate) { settings->setValue("audio/samplingRate", rate); }
 
-    int audioNumInputChannels() { return settings->value("audio/numInputChannels", 0).toInt(); }
+    int audioNumInputChannels() { return settings->value("audio/numInputChannels", 2).toInt(); }
     void setAudioNumInputChannels(int numChans) { settings->setValue("audio/numInputChannels", numChans); }
 
     int audioNumOutputChannels() { return settings->value("audio/numOutputChannels", 2).toInt(); }

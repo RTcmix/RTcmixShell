@@ -83,8 +83,13 @@ Audio::Audio()
     inputDeviceID = audioPreferences->audioInputDeviceID();
     outputDeviceID = audioPreferences->audioOutputDeviceID();
     samplingRate = audioPreferences->audioSamplingRate();
+#ifdef INDEPENDENT_INCHANS
     numInChannels = audioPreferences->audioNumInputChannels();
     numOutChannels = audioPreferences->audioNumOutputChannels();
+#else
+    numOutChannels = audioPreferences->audioNumOutputChannels();
+    numInChannels = numOutChannels;
+#endif
     bufferSize = audioPreferences->audioBufferSize();
     busCount = audioPreferences->audioNumBuses();
 
@@ -135,22 +140,20 @@ int Audio::initializeAudio()
     }
     portAudioInitialized = true;
 
-#ifdef NOTYET
     PaStreamParameters inputParameters;
     memset(&inputParameters, 0, sizeof(inputParameters));
     inputParameters.channelCount = numInChannels;
     inputParameters.device = inputDeviceID;
     inputParameters.sampleFormat = paFloat32;
-#endif
     PaStreamParameters outputParameters;
     memset(&outputParameters, 0, sizeof(outputParameters));
     outputParameters.channelCount = numOutChannels;
     outputParameters.device = outputDeviceID;
     outputParameters.sampleFormat = paFloat32;
-    err = Pa_IsFormatSupported(NULL /* &inputParameters */, &outputParameters, samplingRate);
+    err = Pa_IsFormatSupported(&inputParameters, &outputParameters, samplingRate);
     if (err == paFormatIsSupported) {
         err = Pa_OpenStream(&stream,
-                            NULL /* &inputParameters */,
+                            &inputParameters,
                             &outputParameters,
                             samplingRate,
                             bufferSize,
@@ -187,7 +190,7 @@ int Audio::initializeAudio()
     PaUtil_InitializeRingBuffer(&recordRingBuffer, sizeof(float), ringBufferNumSamps, recordBuffer);
     transferBuffer = (float *) calloc(ringBufferNumSamps, sizeof(float));
 
-//    qDebug("Audio initialized (srate=%d, nchans=%d, bufsize=%d)", int(samplingRate), numOutChannels, bufferSize);
+    qDebug("Audio initialized (srate=%d, inchans=%d, outchans=%d, bufsize=%d)", int(samplingRate), numInChannels, numOutChannels, bufferSize);
     return 0;
 }
 
@@ -245,7 +248,6 @@ int Audio::memberCallback(
             const PaStreamCallbackTimeInfo *timeInfo,
             PaStreamCallbackFlags statusFlags)
 {
-    (void) input;
     (void) timeInfo;
 
 #ifdef DEBUG_IN_CALLBACK
@@ -261,7 +263,7 @@ int Audio::memberCallback(
     (void) statusFlags;
 #endif
 
-    int result = RTcmix_runAudio(NULL /*input*/, output, frameCount);
+    int result = RTcmix_runAudio(const_cast<void *>(input), output, frameCount);
     (void) result;
 #ifdef DEBUG_IN_CALLBACK
     float *p = (float *)output;
@@ -347,7 +349,7 @@ int Audio::initializeRTcmix()
     }
 
     // TODO: handle input as well as output
-    int takingInput = 0;
+    int takingInput = 1;
     status = RTcmix_setparams(samplingRate, numOutChannels, bufferSize, takingInput, busCount);
     if (status != 0) {
         const QString msg = QString(tr("Error configuring RTcmix audio parameters\n(RTcmix_setparams: %1)")).arg(status);
@@ -355,7 +357,7 @@ int Audio::initializeRTcmix()
         return -1;
     }
 
-//    qDebug("RTcmix initialized");
+    qDebug("RTcmix initialized");
     return 0;
 }
 
@@ -433,6 +435,36 @@ void Audio::stopRecording()
 // --------------------------------------------------------------------------
 // Device discovery and info
 
+// Return number of input devices, or -1 if error.
+// Pass back QVector of current input device IDs.
+// QVector is owned by caller.
+int availableInputDeviceIDs(QVector<int> &idList)
+{
+    int numDevices = Pa_GetDeviceCount();
+    if (numDevices < 0) {
+        const QString msg = QString(QObject::tr("Error finding available audio input devices\n(availableInputDeviceIDs: no device IDs discovered)"));
+        warnAlert(nullptr, msg);
+        return -1;
+    }
+
+    const PaDeviceInfo *deviceInfo;
+    int count = 0;
+    for (int id = 0; id < numDevices; id++) {
+        deviceInfo = Pa_GetDeviceInfo(id);
+        if (deviceInfo == NULL) {
+            const QString msg = QString(QObject::tr("Error getting information for audio input device %1\n(availableInputDeviceIDs)")).arg(id);
+            warnAlert(nullptr, msg);
+            return -1;
+        }
+        if (deviceInfo->maxInputChannels > 0) {
+            idList.append(id);
+            count++;
+        }
+    }
+
+    return count;
+}
+
 // Return number of output devices, or -1 if error.
 // Pass back QVector of current output device IDs.
 // QVector is owned by caller.
@@ -463,6 +495,7 @@ int availableOutputDeviceIDs(QVector<int> &idList)
     return count;
 }
 
+#ifdef UNUSED
 // Return device ID of default output device, or -1 if error.
 int defaultOutputDevice()
 {
@@ -473,6 +506,7 @@ int defaultOutputDevice()
     }
     return -1;
 }
+#endif
 
 int deviceIDFromName(const QString &name)
 {
@@ -503,6 +537,13 @@ int deviceNameFromID(const int deviceID, QString &name)
     }
     name = deviceInfo->name;
     return 0;
+}
+
+// Return the max input channel count for the given device.
+int maxInputChannelCount(const int deviceID)
+{
+    const PaDeviceInfo *deviceInfo = Pa_GetDeviceInfo(deviceID);
+    return deviceInfo->maxInputChannels;
 }
 
 // Return the max output channel count for the given device.
