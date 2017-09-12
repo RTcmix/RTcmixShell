@@ -37,6 +37,7 @@ RESOURCES += RTcmixShell.qrc
 build_all:!build_pass {
     CONFIG -= build_all
     CONFIG += release
+    CONFIG += warn_on
 }
 
 # install

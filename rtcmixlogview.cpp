@@ -69,7 +69,7 @@ void rtcmixPrintCallback(const char *printBuffer, void *inContext)
     int totlen = 0;
 #endif
     while (PaUtil_GetRingBufferWriteAvailable(ringBuf)) {
-        int len = strlen(p) + 1;                 // including terminal null
+        int len = int(strlen(p) + 1);                 // including terminal null
         if (len > ringBufferStringCapacity) {    // break it into pieces (not likely)
             qDebug("rtcmixPrintCallback: incoming string too long (%d)", len);
 #ifdef NOCANDO
@@ -139,7 +139,7 @@ void RTcmixLogView::checkLogOutput()
         // was longer than ringBufferStringCapacity and needed to be broken up.
         // Here we simply print the string across multiple lines.
         buf[ringBufferStringCapacity] = 0;  // append null for benefit of QString, but within buf block
-        int len = strlen(buf);
+        int len = int(strlen(buf));
         if (len) {
             if (buf[len-1] == '\n')   // chomp line ending, since appendPlainText adds one
                 buf[len-1] = 0;

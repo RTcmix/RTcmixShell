@@ -617,7 +617,7 @@ void MainWindow::playScore()
     char *buf = ba.data();
     if (!buf)
         return;
-    const int len = strlen(buf);
+    const int len = int(strlen(buf));
     if (len) {
         if (reinitRTcmixOnPlay) {   // recover from prev parse error
             stopScore();
@@ -643,7 +643,7 @@ void MainWindow::playScore()
 
 void MainWindow::sendScoreFragment(char *fragment)
 {
-    int result = RTcmix_parseScore(fragment, strlen(fragment));
+    int result = RTcmix_parseScore(fragment, int(strlen(fragment)));
     Q_UNUSED(result);
     // not sure we should stop anything in this case
 }
