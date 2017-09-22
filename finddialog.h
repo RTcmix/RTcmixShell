@@ -20,6 +20,8 @@ public:
     void find(Editor *);
     void findNext(Editor *);
     void findPrevious(Editor *);
+    void findReplace(Editor *);
+    void findReplaceAll(Editor *);
     void setSearchString(const QString &str) { findStringEdit->setText(str); }
 
 private:

@@ -29,7 +29,7 @@ FindDialog::FindDialog(QWidget *parent)
     QGridLayout *gridLayout = new QGridLayout;
     gridLayout->addWidget(findLabel, 0, 0);
     gridLayout->addWidget(findStringEdit, 0, 1, 1, 3);
-#ifdef NOTYET
+#if 0
     gridLayout->addWidget(replaceLabel, 1, 0);
     gridLayout->addWidget(replaceStringEdit, 1, 1, 1, 3);
     gridLayout->addWidget(findPreviousCheckBox, 2, 1);
@@ -61,6 +61,7 @@ void FindDialog::find(Editor *curEditor)
 
 void FindDialog::findNext(Editor *curEditor)
 {
+//FIXME: should this affect state of Find Previous checkbox?
     QTextDocument::FindFlags flags = 0;
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
@@ -69,8 +70,19 @@ void FindDialog::findNext(Editor *curEditor)
 
 void FindDialog::findPrevious(Editor *curEditor)
 {
+//FIXME: should this affect state of Find Previous checkbox?
     QTextDocument::FindFlags flags = QTextDocument::FindBackward;
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
     curEditor->find(searchString(), flags);
+}
+
+void FindDialog::findReplace(Editor *curEditor)
+{
+    curEditor->textCursor().insertText(replaceStringEdit->text());
+}
+
+void FindDialog::findReplaceAll(Editor *curEditor)
+{
+    Q_UNUSED(curEditor)
 }
