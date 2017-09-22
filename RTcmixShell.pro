@@ -7,6 +7,7 @@ TARGET          = RTcmixShell
 HEADERS         = audio.h \
                   credits.h \
                   editor.h \
+                  finddialog.h \
                   highlighter.h \
                   led.h \
                   mainwindow.h \
@@ -23,6 +24,7 @@ HEADERS         = audio.h \
 
 SOURCES         = audio.cpp \
                   editor.cpp \
+                  finddialog.cpp \
                   highlighter.cpp \
                   mainwindow.cpp \
                   main.cpp \
