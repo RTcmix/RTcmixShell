@@ -3,6 +3,7 @@
 #include <QtDebug>
 
 #include "audio.h"
+#include "finddialog.h"
 #include "led.h"
 #include "mainwindow.h"
 #include "rtcmixlogview.h"
@@ -42,6 +43,7 @@ MainWindow::MainWindow(QWidget *parent)
     createEditors();
     rtcmixLogView = new RTcmixLogView(this);
     createVerticalSplitter();
+    findDialog = new FindDialog(this);
 
     createActions();
     createMenus();
@@ -155,6 +157,21 @@ void MainWindow::createEditActions()
     actionFind->setStatusTip(tr("Open the Find dialog."));
     CHECKED_CONNECT(actionFind, &QAction::triggered, this, &MainWindow::showFindDialog);
 
+    actionFindNext = new QAction(tr("Find Next"), this);
+    actionFindNext->setShortcut(QKeySequence::FindNext);
+    actionFindNext->setStatusTip(tr("Search the rest of the document for the previously entered search text."));
+    CHECKED_CONNECT(actionFindNext, &QAction::triggered, this, &MainWindow::findNext);
+
+    actionFindPrevious = new QAction(tr("Find Previous"), this);
+    actionFindPrevious->setShortcut(QKeySequence::FindPrevious);
+    actionFindPrevious->setStatusTip(tr("Search backward for the previously entered search text."));
+    CHECKED_CONNECT(actionFindPrevious, &QAction::triggered, this, &MainWindow::findPrevious);
+
+    actionUseSelectionForFind = new QAction(tr("Use Selection for Find"), this);
+    actionUseSelectionForFind->setShortcut(Qt::CTRL + Qt::Key_E);
+    actionUseSelectionForFind->setStatusTip(tr("Use the selected text as the search text."));
+    CHECKED_CONNECT(actionUseSelectionForFind, &QAction::triggered, this, &MainWindow::useSelectionForFind);
+
     actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
     actionShowLineNumbers->setShortcut(Qt::CTRL + Qt::Key_L);
     actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
@@ -223,6 +240,9 @@ void MainWindow::createMenus()
     editMenu->addAction(actionPaste);
     editMenu->addSeparator();
     editMenu->addAction(actionFind);
+    editMenu->addAction(actionFindNext);
+    editMenu->addAction(actionFindPrevious);
+    editMenu->addAction(actionUseSelectionForFind);
     editMenu->addSeparator();
     editMenu->addAction(actionShowLineNumbers);
     editMenu->addSeparator();
@@ -547,6 +567,34 @@ bool MainWindow::fileSaveAs()
 
 
 // =====================================================================
+// Edit menu functions
+
+void MainWindow::showFindDialog()
+{
+    int result = findDialog->exec();   // modal
+    if (result == QDialog::Accepted) {
+        findDialog->find(curEditor);
+    }
+}
+
+void MainWindow::findNext()
+{
+    findDialog->findNext(curEditor);
+}
+
+void MainWindow::findPrevious()
+{
+    findDialog->findPrevious(curEditor);
+}
+
+void MainWindow::useSelectionForFind()
+{
+    QString str = curEditor->textCursor().selectedText();
+    findDialog->setSearchString(str);
+}
+
+
+// =====================================================================
 // Score menu functions
 
 void rtcmixFinishedCallback(long long frameCount, void *inContext)
@@ -587,24 +635,6 @@ void MainWindow::setScorePlayMode()
         // should affect future plays
 //        stopScore();
     }
-}
-
-void MainWindow::showFindDialog()
-{
-    // quick and extremely dirty -- real solution is a FindDialog class; make it non-modal
-    QMessageBox mbox;
-    QLineEdit lineEdit;
-    mbox.setText("Type a string to find:");
-    mbox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
-    mbox.layout()->addWidget(&lineEdit);
-    int ret = mbox.exec();
-    switch (ret) {
-        case QMessageBox::Ok:
-            QString str = lineEdit.text();
-            curEditor->find(str);
-            break;
-    }
-    //qDebug() << "find str:" << str.toLatin1();
 }
 
 void MainWindow::xableScoreActions(bool starting)

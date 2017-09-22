@@ -13,6 +13,7 @@ class QPlainTextEdit;
 class QTimer;
 QT_END_NAMESPACE
 class Audio;
+class FindDialog;
 class Led;
 class RTcmixLogView;
 class Preferences;
@@ -73,6 +74,9 @@ private:
     bool maybeSave();
     void setTabStops();
     void showFindDialog();
+    void findNext();
+    void findPrevious();
+    void useSelectionForFind();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
     void stopScoreNoReinit();
@@ -84,6 +88,7 @@ private:
 
     Audio *audio;
     Editor *curEditor;
+    FindDialog *findDialog;
     RTcmixLogView *rtcmixLogView;
     QSplitter *splitter;
     QString fileName;
@@ -98,6 +103,9 @@ private:
     QAction *actionCopy;
     QAction *actionPaste;
     QAction *actionFind;
+    QAction *actionFindNext;
+    QAction *actionFindPrevious;
+    QAction *actionUseSelectionForFind;
     QAction *actionShowLineNumbers;
     QAction *actionPrefs;
     QAction *actionPlay;
