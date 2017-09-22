@@ -72,6 +72,7 @@ private:
     void setCurrentFileName(const QString &);
     bool maybeSave();
     void setTabStops();
+    void showFindDialog();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
     void stopScoreNoReinit();
@@ -96,6 +97,7 @@ private:
     QAction *actionCut;
     QAction *actionCopy;
     QAction *actionPaste;
+    QAction *actionFind;
     QAction *actionShowLineNumbers;
     QAction *actionPrefs;
     QAction *actionPlay;

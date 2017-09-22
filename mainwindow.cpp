@@ -150,6 +150,11 @@ void MainWindow::createEditActions()
     actionPaste->setStatusTip(tr("Paste the clipboard into the current selection"));
     CHECKED_CONNECT(actionPaste, &QAction::triggered, curEditor, &QPlainTextEdit::paste);
 
+    actionFind = new QAction(tr("&Find..."), this);
+    actionFind->setShortcut(QKeySequence::Find);
+    actionFind->setStatusTip(tr("Open the Find dialog."));
+    CHECKED_CONNECT(actionFind, &QAction::triggered, this, &MainWindow::showFindDialog);
+
     actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
     actionShowLineNumbers->setShortcut(Qt::CTRL + Qt::Key_L);
     actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
@@ -216,6 +221,8 @@ void MainWindow::createMenus()
     editMenu->addAction(actionCut);
     editMenu->addAction(actionCopy);
     editMenu->addAction(actionPaste);
+    editMenu->addSeparator();
+    editMenu->addAction(actionFind);
     editMenu->addSeparator();
     editMenu->addAction(actionShowLineNumbers);
     editMenu->addSeparator();
@@ -580,6 +587,24 @@ void MainWindow::setScorePlayMode()
         // should affect future plays
 //        stopScore();
     }
+}
+
+void MainWindow::showFindDialog()
+{
+    // quick and extremely dirty -- real solution is a FindDialog class; make it non-modal
+    QMessageBox mbox;
+    QLineEdit lineEdit;
+    mbox.setText("Type a string to find:");
+    mbox.setStandardButtons(QMessageBox::Ok | QMessageBox::Cancel);
+    mbox.layout()->addWidget(&lineEdit);
+    int ret = mbox.exec();
+    switch (ret) {
+        case QMessageBox::Ok:
+            QString str = lineEdit.text();
+            curEditor->find(str);
+            break;
+    }
+    //qDebug() << "find str:" << str.toLatin1();
 }
 
 void MainWindow::xableScoreActions(bool starting)
