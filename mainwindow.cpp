@@ -172,6 +172,20 @@ void MainWindow::createEditActions()
     actionUseSelectionForFind->setStatusTip(tr("Use the selected text as the search text."));
     CHECKED_CONNECT(actionUseSelectionForFind, &QAction::triggered, this, &MainWindow::useSelectionForFind);
 
+    actionReplace = new QAction(tr("Replace"), this);
+    actionReplace->setShortcut(Qt::CTRL + Qt::Key_Equal);
+    actionReplace->setStatusTip(tr("If selected text is the search string, replace it with text entered in the Find dialog."));
+    CHECKED_CONNECT(actionReplace, &QAction::triggered, this, &MainWindow::replace);
+
+    actionReplaceAndFind = new QAction(tr("Replace && Find"), this);
+    actionReplaceAndFind->setShortcut(Qt::CTRL + Qt::ALT + Qt::Key_Equal);
+    actionReplaceAndFind->setStatusTip(tr("If selected text is the search string, replace it with text entered in the Find dialog, then select the next match."));
+    CHECKED_CONNECT(actionReplaceAndFind, &QAction::triggered, this, &MainWindow::replaceAndFind);
+
+    actionReplaceAll = new QAction(tr("Replace All"), this);
+    actionReplaceAll->setStatusTip(tr("Replace all instances of the search string with the text entered in the Find dialog."));
+    CHECKED_CONNECT(actionReplaceAll, &QAction::triggered, this, &MainWindow::replaceAll);
+
     actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
     actionShowLineNumbers->setShortcut(Qt::CTRL + Qt::Key_L);
     actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
@@ -243,6 +257,9 @@ void MainWindow::createMenus()
     editMenu->addAction(actionFindNext);
     editMenu->addAction(actionFindPrevious);
     editMenu->addAction(actionUseSelectionForFind);
+    editMenu->addAction(actionReplace);
+    editMenu->addAction(actionReplaceAndFind);
+    editMenu->addAction(actionReplaceAll);
     editMenu->addSeparator();
     editMenu->addAction(actionShowLineNumbers);
     editMenu->addSeparator();
@@ -589,8 +606,22 @@ void MainWindow::findPrevious()
 
 void MainWindow::useSelectionForFind()
 {
-    QString str = curEditor->textCursor().selectedText();
-    findDialog->setSearchString(str);
+    findDialog->useSelectionForFind(curEditor);
+}
+
+void MainWindow::replace()
+{
+    findDialog->replace(curEditor);
+}
+
+void MainWindow::replaceAndFind()
+{
+    findDialog->replaceAndFind(curEditor);
+}
+
+void MainWindow::replaceAll()
+{
+    findDialog->replaceAll(curEditor);
 }
 
 

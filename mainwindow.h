@@ -77,6 +77,9 @@ private:
     void findNext();
     void findPrevious();
     void useSelectionForFind();
+    void replace();
+    void replaceAndFind();
+    void replaceAll();
     void xableScoreActions(bool);
     void setScorePrintLevel(int);
     void stopScoreNoReinit();
@@ -106,6 +109,9 @@ private:
     QAction *actionFindNext;
     QAction *actionFindPrevious;
     QAction *actionUseSelectionForFind;
+    QAction *actionReplace;
+    QAction *actionReplaceAndFind;
+    QAction *actionReplaceAll;
     QAction *actionShowLineNumbers;
     QAction *actionPrefs;
     QAction *actionPlay;

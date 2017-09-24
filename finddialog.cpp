@@ -29,17 +29,11 @@ FindDialog::FindDialog(QWidget *parent)
     QGridLayout *gridLayout = new QGridLayout;
     gridLayout->addWidget(findLabel, 0, 0);
     gridLayout->addWidget(findStringEdit, 0, 1, 1, 3);
-#if 0
     gridLayout->addWidget(replaceLabel, 1, 0);
     gridLayout->addWidget(replaceStringEdit, 1, 1, 1, 3);
     gridLayout->addWidget(findPreviousCheckBox, 2, 1);
     gridLayout->addWidget(caseSensitiveCheckBox, 2, 2);
     gridLayout->addWidget(wholeWordsCheckBox, 2, 3);
-#else
-    gridLayout->addWidget(findPreviousCheckBox, 1, 1);
-    gridLayout->addWidget(caseSensitiveCheckBox, 1, 2);
-    gridLayout->addWidget(wholeWordsCheckBox, 1, 3);
-#endif
 
     QVBoxLayout *mainLayout = new QVBoxLayout;
     mainLayout->addLayout(gridLayout);
@@ -50,39 +44,58 @@ FindDialog::FindDialog(QWidget *parent)
     setWindowTitle(tr("Find"));
 }
 
-void FindDialog::find(Editor *curEditor)
+bool FindDialog::find(Editor *curEditor)
 {
     QTextDocument::FindFlags flags = 0;
     flags.setFlag(QTextDocument::FindBackward, findPreviousCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
-    curEditor->find(searchString(), flags);
+    return curEditor->find(searchString(), flags);
 }
 
-void FindDialog::findNext(Editor *curEditor)
+bool FindDialog::findNext(Editor *curEditor)
 {
 //FIXME: should this affect state of Find Previous checkbox?
     QTextDocument::FindFlags flags = 0;
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
-    curEditor->find(searchString(), flags);
+    return curEditor->find(searchString(), flags);
 }
 
-void FindDialog::findPrevious(Editor *curEditor)
+bool FindDialog::findPrevious(Editor *curEditor)
 {
 //FIXME: should this affect state of Find Previous checkbox?
     QTextDocument::FindFlags flags = QTextDocument::FindBackward;
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
-    curEditor->find(searchString(), flags);
+    return curEditor->find(searchString(), flags);
 }
 
-void FindDialog::findReplace(Editor *curEditor)
+void FindDialog::useSelectionForFind(Editor *curEditor)
 {
-    curEditor->textCursor().insertText(replaceStringEdit->text());
+    QString selStr = curEditor->textCursor().selectedText();
+    setSearchString(selStr);
 }
 
-void FindDialog::findReplaceAll(Editor *curEditor)
+void FindDialog::replace(Editor *curEditor)
 {
-    Q_UNUSED(curEditor)
+    QString selStr = curEditor->textCursor().selectedText();
+    Qt::CaseSensitivity cs = (caseSensitiveCheckBox->isChecked() ? Qt::CaseSensitive : Qt::CaseInsensitive);
+//FIXME: does not take into account whole words option
+    if (QString::compare(selStr, searchString(), cs) == 0)
+        curEditor->textCursor().insertText(replaceStringEdit->text());
+}
+
+bool FindDialog::replaceAndFind(Editor *curEditor)
+{
+    replace(curEditor);
+    return find(curEditor);
+}
+
+void FindDialog::replaceAll(Editor *curEditor)
+{
+    curEditor->moveCursor(QTextCursor::Start, QTextCursor::MoveAnchor);
+    bool found = find(curEditor);
+    while (found)
+        found = replaceAndFind(curEditor);
 }

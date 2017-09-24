@@ -17,15 +17,18 @@ class FindDialog : public QDialog
 
 public:
     FindDialog(QWidget *parent = 0);
-    void find(Editor *);
-    void findNext(Editor *);
-    void findPrevious(Editor *);
-    void findReplace(Editor *);
-    void findReplaceAll(Editor *);
-    void setSearchString(const QString &str) { findStringEdit->setText(str); }
+
+    bool find(Editor *);
+    bool findNext(Editor *);
+    bool findPrevious(Editor *);
+    void useSelectionForFind(Editor *);
+    void replace(Editor *);
+    bool replaceAndFind(Editor *);
+    void replaceAll(Editor *);
 
 private:
     QString searchString() { return findStringEdit->text(); }
+    void setSearchString(const QString &str) { findStringEdit->setText(str); }
 
     QDialogButtonBox *findCancelButtonBox;
     QLineEdit *findStringEdit;
