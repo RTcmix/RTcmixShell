@@ -1,3 +1,6 @@
+v1.0b7 (10/29/17)
+	- Internal RTcmix changes.
+
 v1.0b6 (9/24/17)
 	- Support audio input. The number of input channels must be
 	  the same as the number of output channels, due to an RTcmix
