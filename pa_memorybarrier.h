@@ -65,6 +65,8 @@
     /* Here are the memory barrier functions. Mac OS X only provides
        full memory barriers, so the three types of barriers are the same,
        however, these barriers are superior to compiler-based ones. */
+// JGG: as of macOS 10.12, OSMemoryBarrier is deprecated. Here is a fix from another project:
+// https://github.com/google/leveldb/commit/594cc987af2e0af6417c4ac2b947ee8cdad59e5e
 #   define PaUtil_FullMemoryBarrier()  OSMemoryBarrier()
 #   define PaUtil_ReadMemoryBarrier()  OSMemoryBarrier()
 #   define PaUtil_WriteMemoryBarrier() OSMemoryBarrier()
