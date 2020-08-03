@@ -46,7 +46,7 @@ private:
     int startAudio();
     int stopAudio();
 
-    // We use a static method wrapper for out callback to make portaudio work from C++,
+    // We use a static method wrapper for our callback to make portaudio work from C++,
     // as described here: https://app.assembla.com/wiki/show/portaudio/Tips_CPlusPlus .
     // For general problem, google: "function pointer C++ static" e.g.,
     // https://stackoverflow.com/questions/8302226/how-to-send-a-pointer-on-a-callback-function-which-is-encapsulated-in-a-class
