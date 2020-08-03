@@ -1,19 +1,46 @@
+#!/bin/sh
+
 # NB: if you get lots of error messages, it's probably because there is
 # already an app bundle with some of these files in it. It's best to delete
 # the app bundle, then build the project, then run this script.
 
 appname=RTcmixShell
-# for some reason, Qt Creator keeps wanting to write the location
-# of rtcmix_embedded.dylib as the one in my RTcmix tree, instead
-# of the one in RTcmixShell/lib/mac.
-exepath=/Users/johgibso/docs/development/Qt-mine/build-${appname}-Desktop_Qt_5_9_1_clang_64bit-Release/${appname}.app/Contents/MacOS/${appname}
-install_name_tool -change /Users/johgibso/rtcmix/lib/mac/librtcmix_embedded.dylib /Users/johgibso/docs/development/Qt-mine/${appname}/lib/mac/librtcmix_embedded.dylib $exepath
-cd ../build-${appname}-Desktop_Qt_5_9_1_clang_64bit-Release
+qtversion=5_15_0
+projectdir=/Users/johgibso/docs/development/Qt-mine/${appname}
+
+librtcmix=librtcmix_embedded.dylib
+libportaudio=libportaudio.2.dylib
+libsndfile=libsndfile.1.dylib
+
+builddir=${projectdir}/../build-${appname}-Desktop_Qt_${qtversion}_clang_64bit-Release
+mylibdir=${projectdir}/lib/mac
+frameworksdir=${builddir}/${appname}.app/Contents/Frameworks
+executable=${builddir}/${appname}.app/Contents/MacOS/${appname}
+
+#echo ${builddir}
+#echo ${mylibdir}
+#echo ${frameworksdir}
+#echo ${executable}
+#exit 0
+
+cd ${builddir}
 macdeployqt ${appname}.app
 
-# now dylibs are copied into the app bundle, but the reference to
-# the rtcmix lib in the app is still wrong.
-install_name_tool -change /Users/johgibso/docs/development/Qt-mine/${appname}/lib/mac/librtcmix_embedded.dylib @executable_path/../Frameworks/librtcmix_embedded.dylib $exepath
+# Copy our libs into the bundle.
+cp ${mylibdir}/${librtcmix} ${frameworksdir}
+cp ${mylibdir}/${libportaudio} ${frameworksdir}
+cp ${mylibdir}/${libsndfile} ${frameworksdir}
 
-# replace the Info.plist with our own
+# Fix references within the shared libs to their bundle-relative locations.
+install_name_tool -id @executable_path/../Frameworks/${librtcmix} ${frameworksdir}/${librtcmix}
+install_name_tool -id @executable_path/../Frameworks/${libportaudio} ${frameworksdir}/${libportaudio}
+install_name_tool -id @executable_path/../Frameworks/${libsndfile} ${frameworksdir}/${libsndfile}
+
+# Fix references to the shared libs from the app executable.
+# (Yes, no change for portaudio, but could be different in future.)
+install_name_tool -change /Users/johgibso/rtcmix/lib/${librtcmix} @executable_path/../Frameworks/${librtcmix} ${executable}
+install_name_tool -change @executable_path/../Frameworks/${libportaudio} @executable_path/../Frameworks/${libportaudio} ${executable}
+install_name_tool -change /usr/local/lib/${libsndfile} @executable_path/../Frameworks/${libsndfile} ${executable}
+
+# Replace the Info.plist with our own.
 cp -f ../${appname}/Info.plist ${appname}.app/Contents/
