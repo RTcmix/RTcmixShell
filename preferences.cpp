@@ -488,26 +488,26 @@ EditorTab::EditorTab(QWidget *parent) : QWidget(parent)
     //The filters are too slow. The writing system filter puts weird chars into the menu.
     //editorFontFamilyMenu->setFontFilters(QFontComboBox::ScalableFonts /* | QFontComboBox::MonospacedFonts */);
     //editorFontFamilyMenu->setWritingSystem(QFontDatabase::Latin);
-    CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontFamily);
+    CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::textActivated), mainWindow, &MainWindow::editorFontFamily);
 
     editorFontSizeMenu = new QComboBox;
     static const int fontSizes[] = { 9, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 32, 40, 48, 64, 72, 96, 128, 192 };
     const int len = sizeof(fontSizes) / sizeof(fontSizes[0]);
     for (int i = 0; i < len; i++)
         editorFontSizeMenu->addItem(QString::number(fontSizes[i]));
-    CHECKED_CONNECT(editorFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::editorFontSize);
+    CHECKED_CONNECT(editorFontSizeMenu, QOverload<const QString &>::of(&QComboBox::textActivated), mainWindow, &MainWindow::editorFontSize);
 
     editorTabWidthSpin = new QSpinBox;
     editorTabWidthSpin->setRange(1, 8);
     CHECKED_CONNECT(editorTabWidthSpin, QOverload<int>::of(&QSpinBox::valueChanged), mainWindow, &MainWindow::editorTabWidth);
 
     logFontFamilyMenu = new QFontComboBox;
-    CHECKED_CONNECT(logFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontFamily);
+    CHECKED_CONNECT(logFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::textActivated), mainWindow, &MainWindow::logFontFamily);
 
     logFontSizeMenu = new QComboBox;
     for (int i = 0; i < len; i++)
         logFontSizeMenu->addItem(QString::number(fontSizes[i]));
-    CHECKED_CONNECT(logFontSizeMenu, QOverload<const QString &>::of(&QComboBox::activated), mainWindow, &MainWindow::logFontSize);
+    CHECKED_CONNECT(logFontSizeMenu, QOverload<const QString &>::of(&QComboBox::textActivated), mainWindow, &MainWindow::logFontSize);
 
     logLinkFamily = new QCheckBox(tr("Always set log font family to editor font"));
     CHECKED_CONNECT(logLinkFamily, &QCheckBox::clicked, this, &EditorTab::logLinkFamilyClicked);
@@ -607,10 +607,10 @@ void EditorTab::logLinkFamilyClicked(bool isChecked)
 {
     if (isChecked) {
         logFontFamilyMenu->setEnabled(false);
-        CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), this, &EditorTab::linkedEditorFontFamilyChanged);
+        CHECKED_CONNECT(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::textActivated), this, &EditorTab::linkedEditorFontFamilyChanged);
     }
     else {
-        disconnect(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::activated), this, &EditorTab::linkedEditorFontFamilyChanged);
+        disconnect(editorFontFamilyMenu, QOverload<const QString &>::of(&QComboBox::textActivated), this, &EditorTab::linkedEditorFontFamilyChanged);
         logFontFamilyMenu->setEnabled(true);
     }
 }
