@@ -47,7 +47,7 @@ int Editor::lineNumberAreaWidth()
         max /= 10;
         digits++;
     }
-    int space = 2 + (fontMetrics().width(QLatin1Char('9')) * (digits + 1));     // JG tweak
+    int space = 2 + (fontMetrics().horizontalAdvance(QLatin1Char('9')) * (digits + 1));     // JG tweak
 
     return space;
 }
@@ -180,7 +180,7 @@ void Editor::setTabStopChars(int tabStopChars)
     for (int i = 0; i < tabStopChars; i++)
         spaces += " ";
     QFontMetrics metrics(font());
-    setTabStopWidth(metrics.width(spaces));
+    setTabStopDistance(metrics.horizontalAdvance(spaces));
 }
 
 void Editor::cursorPositionChanged()
