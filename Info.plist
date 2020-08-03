@@ -2,6 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CFBundleVersion</key>
+	<string>1.0.8</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.0.8</string>
+	<key>CFBundleName</key>
+	<string>RTcmixShell</string>
+	<key>CFBundleDisplayName</key>
+	<string>RTcmixShell</string>
+	<key>CFBundleExecutable</key>
+	<string>RTcmixShell</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleIconFile</key>
+	<string>RTcmixShell.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.rtcmix.RTcmixShell</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>RTcmixShell needs access to the microphone in order to play and record audio.</string>
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
@@ -13,21 +31,13 @@
 			<string>Editor</string>
 		</dict>
 	</array>
-	<key>CFBundleExecutable</key>
-	<string>RTcmixShell</string>
-	<key>CFBundleIdentifier</key>
-	<string>org.rtcmix.RTcmixShell</string>
-	<key>CFBundleGetInfoString</key>
-	<string>v1.0b7, Copyright 2017 John Gibson</string>
-	<key>CFBundleIconFile</key>
-	<string>RTcmixShell.icns</string>
-	<key>CFBundleLongVersionString</key>
-	<string>RTcmixShell v1.0b7, Copyright 2017 John Gibson</string>
-	<key>CFBundlePackageType</key>
-	<string>APPL</string>
-	<key>CFBundleShortVersionString</key>
-	<string>1.0.3</string>
-	<key>CFBundleSignature</key>
-	<string>JGrt</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Copyright 2017-2020 John Gibson at al.</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.13</string>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
 </dict>
 </plist>
