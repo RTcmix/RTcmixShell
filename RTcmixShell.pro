@@ -40,7 +40,11 @@ build_all:!build_pass {
     CONFIG -= build_all
     CONFIG += release
     CONFIG += warn_on
+    CONFIG -= app_bundle
 }
+
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+
 
 # install
 target.path = build
