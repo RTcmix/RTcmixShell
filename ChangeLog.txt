@@ -1,5 +1,15 @@
+v1.0.8 (8/3/20)
+	- Compile with Qt 5.15.0.
+	- Using latest version of RTcmix shared lib.
+	- Try to solve problem with mic permission on Mojave/Catalina: it
+	  doesn't ask for permission, and then gives a portaudio error.
+	    1. Link with patched libportaudio.
+	    2. Add NSMicrophoneUsageDescription key to Info.plist.
+	- Clean up Info.plist.
+
 v1.0b7 (10/29/17)
 	- Internal RTcmix changes.
+	- Double the maximum number and length of log lines.
 
 v1.0b6 (9/24/17)
 	- Support audio input. The number of input channels must be
