@@ -46,7 +46,7 @@ FindDialog::FindDialog(QWidget *parent)
 
 bool FindDialog::find(Editor *curEditor)
 {
-    QTextDocument::FindFlags flags = 0;
+    QTextDocument::FindFlags flags;
     flags.setFlag(QTextDocument::FindBackward, findPreviousCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
@@ -56,7 +56,7 @@ bool FindDialog::find(Editor *curEditor)
 bool FindDialog::findNext(Editor *curEditor)
 {
 //FIXME: should this affect state of Find Previous checkbox?
-    QTextDocument::FindFlags flags = 0;
+    QTextDocument::FindFlags flags;
     flags.setFlag(QTextDocument::FindCaseSensitively, caseSensitiveCheckBox->isChecked());
     flags.setFlag(QTextDocument::FindWholeWords, wholeWordsCheckBox->isChecked());
     return curEditor->find(searchString(), flags);
