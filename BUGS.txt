@@ -16,4 +16,5 @@ LIMITATIONS
 --------------------
 BUGS
 
-
+- Sometimes when I'm running a score, the stop button isn't enabled.
+  This is in exclusive, not overlapping, score mode.
