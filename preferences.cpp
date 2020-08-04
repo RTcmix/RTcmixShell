@@ -29,7 +29,7 @@ void SelectColorButton::updateColor()
 void SelectColorButton::changeColor()
 {
     QColor newColor = QColorDialog::getColor(color, parentWidget());
-    if (newColor != color)
+    if (newColor.isValid() && newColor != color)
         setColor(newColor);
 }
 
