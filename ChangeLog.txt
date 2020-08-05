@@ -1,3 +1,14 @@
+v1.0.9 (8/5/20)
+	- Optionally signed and notarized for Catalina+ compatibility.
+	  Now there are two versions: one unsigned/unnotarized, and one
+	  signed/notarized. The latter has "signed" appended to the zip.
+	- Fix unresponsive color swatch buttons in Prefs > Syntax Highlighting pane.
+	  This is a regression since Qt 5.9.
+	  Still has bug: any button click (incl. OK/Cancel) doesn't register after
+	  invoking dialog or changing tab -- another Qt regression.
+	- Fix but in Prefs > Syntax Highlighting pane: cancelling color dialog
+	  sets color to black.
+
 v1.0.8 (8/3/20)
 	- Compile with Qt 5.15.0.
 	- Using latest version of RTcmix shared lib.
