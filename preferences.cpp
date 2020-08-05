@@ -19,24 +19,19 @@ SelectColorButton::SelectColorButton(QWidget *parent)
 {
     Q_UNUSED(parent);
     CHECKED_CONNECT(this, &QPushButton::clicked, this, &SelectColorButton::changeColor);
-}
-
-void SelectColorButton::updateColor()
-{
-    setStyleSheet("background-color: " + color.name());
+    setFixedSize(72, 36);
 }
 
 void SelectColorButton::changeColor()
 {
     QColor newColor = QColorDialog::getColor(color, parentWidget());
-    if (newColor.isValid() && newColor != color)
+    if (newColor.isValid())
         setColor(newColor);
 }
 
 void SelectColorButton::setColor(const QColor &color)
 {
     this->color = color;
-    updateColor();
     emit colorChanged(this->color);
 }
 
@@ -45,6 +40,26 @@ const QColor &SelectColorButton::getColor()
     return color;
 }
 
+void SelectColorButton::paintEvent(QPaintEvent *event)
+{
+    QPushButton::paintEvent(event);
+
+    // Get rect of QPushButton, and inset it so that it just covers
+    // the actual button rect that is sensitive to mouse clicks.
+    // Not sure how to get this otherwise. If we don't do this,
+    // clicks outside the covered-up button graphic will not do
+    // anything, which is very confusing for the user.
+    QRect rect = event->rect();
+    QPainter painter(this);
+    painter.setPen(Qt::darkGray);
+    painter.setBrush(QBrush(color));    // comment out to debug rect
+    rect.adjust(6, 3, -6, -6);          // these are okay for macOS 14 (Mojave)
+    //qDebug() << "rect: " << rect;
+    painter.drawRect(rect);
+}
+
+
+//-------------------------------------------------------------------------------
 
 #ifdef GENERALTAB
 GeneralTab::GeneralTab(QWidget *parent) : QWidget(parent)
@@ -65,7 +80,6 @@ void GeneralTab::cancelPreferences(Preferences *prefs)
 {
 
 }
-
 #endif
 
 

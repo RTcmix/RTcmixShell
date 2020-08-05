@@ -7,6 +7,7 @@
 #include <QSettings>
 #include <QSize>
 #include <QWidget>
+#include <QtDebug>
 
 QT_BEGIN_NAMESPACE
 class QCheckBox;
@@ -32,8 +33,8 @@ public:
     const QColor &getColor();
 
 public slots:
-    void updateColor();
     void changeColor();
+    void paintEvent(QPaintEvent *event);
 
 signals:
     void colorChanged(QColor);
@@ -43,6 +44,7 @@ private:
 };
 
 #ifdef GENERALTAB
+// This is how you would add another tab to the dialog.
 class GeneralTab : public QWidget
 {
     Q_OBJECT
