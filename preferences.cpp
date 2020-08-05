@@ -25,8 +25,10 @@ SelectColorButton::SelectColorButton(QWidget *parent)
 void SelectColorButton::changeColor()
 {
     QColor newColor = QColorDialog::getColor(color, parentWidget());
-    if (newColor.isValid())
+    if (newColor.isValid()) {
         setColor(newColor);
+        update();   // force paintEvent
+    }
 }
 
 void SelectColorButton::setColor(const QColor &color)
