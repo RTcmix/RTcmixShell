@@ -26,3 +26,5 @@ tool=/usr/bin/codesign
 ${tool} --sign "$identity" --deep --force --verbose --options runtime --entitlements ${entitlements} ${app}
 ${tool} --verify --verbose --deep --strict ${app}
 
+# finally, make a zip
+/usr/bin/ditto -c -k --keepParent ${exportdir} ${exportdir}.zip
