@@ -10,21 +10,40 @@ entitlements=${projectdir}/Entitlements.plist
 builddir=${projectdir}/../build-${appname}-Desktop_Qt_${qtversion}_clang_64bit-Release
 version=`grep "define APP_VERSION_STR" main.cpp | sed 's/"//g' \
 	| tr -d '\r\n' | awk '/define/ {print $3}'`
-exportdir=${appname}-${version}-macOS
-app=${exportdir}/${appname}.app
-if [ -e ${exportdir} ]
-then
-	echo "Export dir `${exportdir}` already exists. Delete before running this."
-	exit -1
+unsigneddir=${appname}-${version}-macOS
+signeddir=${appname}-${version}-macOS-signed
+if [ -e ${unsigneddir} ]; then
+	echo "The dir for the unsigned version (`${unsigneddir}`) already exists."
+	echo "Delete it before running this script."
+	exit 1
 fi
-/bin/mkdir ${exportdir}
-/usr/bin/ditto ${builddir}/${appname}.app ${app}
-/usr/bin/ditto ChangeLog.txt ${exportdir}/ChangeLog.txt
+if [ -e ${signeddir} ]; then
+	echo "The dir for the signed version (`${signeddir}`) already exists."
+	echo "Delete it before running this script."
+	exit 1
+fi
+if [ ! -e ${builddir}/${appname}.app/Contents/Frameworks ]; then
+	echo "The Frameworks dir in the built app doesn't exist."
+	echo "That means you haven't run 'deploy-build-mac.sh' yet."
+	echo "Do that first, then try 'sign.sh' again."
+	exit 1
+fi
 
+# Copy app from build dir into unsigned export dir, along with ChangeLog.txt,
+# and zip the export dir.
+/bin/mkdir ${unsigneddir}
+/usr/bin/ditto ${builddir}/${appname}.app ${unsigneddir}/${appname}.app
+/usr/bin/ditto ChangeLog.txt ${unsigneddir}/ChangeLog.txt
+/usr/bin/ditto -c -k --keepParent ${unsigneddir} ${unsigneddir}.zip
+
+# Copy app from build dir into the signed export dir, along with ChangeLog.txt.
+/bin/mkdir ${signeddir}
+/usr/bin/ditto ${builddir}/${appname}.app ${signeddir}/${appname}.app
+/usr/bin/ditto ChangeLog.txt ${signeddir}/ChangeLog.txt
+
+# Sign the app and its embedded libs, including the Qt-supplied ones.
 tool=/usr/bin/codesign
 #tool=echo
-${tool} --sign "$identity" --deep --force --verbose --options runtime --entitlements ${entitlements} ${app}
-${tool} --verify --verbose --deep --strict ${app}
+${tool} --sign "$identity" --deep --force --verbose --options runtime --entitlements ${entitlements} ${signeddir}/${appname}.app
+${tool} --verify --verbose --deep --strict ${signeddir}/${appname}.app
 
-# finally, make a zip
-/usr/bin/ditto -c -k --keepParent ${exportdir} ${exportdir}.zip
