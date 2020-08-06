@@ -9,28 +9,24 @@ appname=RTcmixShell
 bundleid="org.rtcmix.RTcmixShell"
 version=`grep "define APP_VERSION_STR" main.cpp | sed 's/"//g' \
 	| tr -d '\r\n' | awk '/define/ {print $3}'`
-signeddir=${appname}-${version}-macOS
-exportdir=${appname}-${version}-macOS-signed
-app=${exportdir}/${appname}.app
-if [ -e ${exportdir} ]; then
-	echo "Export dir `${exportdir}` already exists. Delete before running this."
+signeddir=${appname}-${version}-macOS-signed
+app=${signeddir}/${appname}.app
+if [ ! -e ${signeddir} ]; then
+	echo "The dir for the signed version (`${signeddir}`) should already exist."
+	echo "If it doesn't, maybe you haven't run 'sign.sh' yet."
 	exit 1
 fi
 
-/bin/mkdir ${exportdir}
-/usr/bin/ditto ${signeddir}/${appname}.app ${app}
-/usr/bin/ditto ChangeLog.txt ${exportdir}/ChangeLog.txt
+/usr/bin/ditto -c -k --keepParent ${signeddir} ${signeddir}.zip
 
-/usr/bin/ditto -c -k --keepParent ${exportdir} ${exportdir}.zip
-
-uuidfile=notary-uuid
+uuidfile=.notarize-uuid
 
 # This will block until the upload is complete.
 /usr/bin/xcrun altool --notarize-app \
 	--primary-bundle-id "$bundleid" \
 	--username "$user" \
 	--password "@keychain:notary" \
-	--f ${exportdir}.zip 2>&1 | tee "$uuidfile"
+	--f ${signeddir}.zip 2>&1 | tee "$uuidfile"
 
 # If successful, this will return something like...
 # 2020-08-05 20:06:43.775 altool[8571:13018300] No errors uploading 'RTcmixShell-1.0.9-macOS-signed.zip'.
@@ -47,9 +43,9 @@ if [ -z "$uuid" ]; then
 fi
 
 # Once notarization is complete, I receive an email message about it.
-# But here we check using tools.
+# But here we check for this using altool.
 
-statusfile=notary-status
+statusfile=.notarize-status
 
 while true ; do
 	sleep 30
@@ -91,6 +87,6 @@ echo "Stapling to app bundle and re-zipping..."
 
 /usr/bin/xcrun stapler staple ${app}
 
-/bin/rm -f ${exportdir}.zip
-/usr/bin/ditto -c -k --keepParent ${exportdir} ${exportdir}.zip
+/bin/rm -f ${signeddir}.zip
+/usr/bin/ditto -c -k --keepParent ${signeddir} ${signeddir}.zip
 
