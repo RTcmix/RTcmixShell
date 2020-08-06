@@ -5,12 +5,8 @@
 # Visualiser (sonicvisualiser.org)
 
 user="johgibso@gmail.com"
-identity='Developer ID Application: Indiana University (5J69S77A7G)'
 appname=RTcmixShell
 bundleid="org.rtcmix.RTcmixShell"
-qtversion=5_15_0
-projectdir=/Users/johgibso/docs/development/Qt-mine/${appname}
-builddir=${projectdir}/../build-${appname}-Desktop_Qt_${qtversion}_clang_64bit-Release
 version=`grep "define APP_VERSION_STR" main.cpp | sed 's/"//g' \
 	| tr -d '\r\n' | awk '/define/ {print $3}'`
 signeddir=${appname}-${version}-macOS
@@ -58,7 +54,7 @@ statusfile=notary-status
 while true ; do
 	sleep 30
 
-	/usr/bin/xcrun altool  --notarization-info \
+	/usr/bin/xcrun altool --notarization-info \
 		"$uuid" \
 		--username "$user" \
 		--password "@keychain:notary" 2>&1 | tee "$statusfile"
@@ -68,7 +64,7 @@ while true ; do
 		echo "Notarization approved! Status output is:"
 		cat "$statusfile"
 		break
-	elif grep -q 'in progress' "$statfile"; then
+	elif grep -q 'in progress' "$statusfile"; then
 		echo
 		echo "Still in progress... Status output is:"
 		cat "$statusfile"
