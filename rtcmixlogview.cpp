@@ -32,7 +32,10 @@ RTcmixLogView::RTcmixLogView(QWidget *parent) : QPlainTextEdit(parent)
     QPalette p = palette();
     p.setColor(QPalette::Active, QPalette::Base, QColor(240, 240, 240));
     p.setColor(QPalette::Inactive, QPalette::Base, QColor(240, 240, 240));
-    setPalette(p);
+    //FIXME: I disabled the gray background, because it doesn't change
+    // when you use dark mode in macOS, making the log unreadable.
+    // They need a simple way to deal with dark mode; not sure it's there yet.
+    //setPalette(p);
 
     // set up the ring buffer
     ringBufferBlock = (char *) calloc(ringBufferNumStrings, ringBufferStringCapacity);
