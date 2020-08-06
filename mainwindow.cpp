@@ -275,7 +275,7 @@ void MainWindow::createMenus()
 
     QMenu *helpMenu = menuBar()->addMenu(tr("Help"));
     helpMenu->addAction(tr("About"), this, &MainWindow::about);
-//    helpMenu->addAction(tr("About &Qt"), qApp, &QApplication::aboutQt);
+    helpMenu->addAction(tr("About &Qt"), qApp, &QApplication::aboutQt);
 }
 
 void MainWindow::createToolbars()
