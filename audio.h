@@ -36,14 +36,14 @@ class Audio : public QObject
 public:
     Audio();
     ~Audio();
-    int reinitializeRTcmix();
+    int reinitializeRTcmix(bool interactive=false);
+    int startAudio();
     bool startRecording(const QString &);
     void stopRecording();
 
 private:
     int initializeAudio();
-    int initializeRTcmix();
-    int startAudio();
+    int initializeRTcmix(bool interactive=false);
     int stopAudio();
 
     // We use a static method wrapper for our callback to make portaudio work from C++,
