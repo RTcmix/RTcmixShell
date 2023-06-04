@@ -50,6 +50,7 @@
 
 #include <QtDebug>
 
+#include "QtCore/qvector.h"
 #include "highlighter.h"
 #include "preferences.h"
 
