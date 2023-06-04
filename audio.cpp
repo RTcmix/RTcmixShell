@@ -97,9 +97,7 @@ Audio::Audio()
 
     int result = initializeAudio();
     if (result == 0) {
-        result = initializeRTcmix();
-        if (result == 0)
-            startAudio();
+        initializeRTcmix();
     }
 }
 
@@ -196,7 +194,7 @@ int Audio::initializeAudio()
 
 int Audio::startAudio()
 {
-    if (portAudioInitialized && stream != NULL) {
+    if (portAudioInitialized && stream != NULL && Pa_IsStreamStopped(stream)) {
         PaError err = Pa_StartStream(stream);
         if (err != paNoError) {
             const QString msg = QString(tr("Error starting audio\n(Pa_StartStream: %1)")).arg(Pa_GetErrorText(err));
@@ -219,7 +217,7 @@ int Audio::stopAudio()
     if (clippingTimer->isActive())
         clippingTimer->stop();
 
-    if (portAudioInitialized && stream != NULL) {
+    if (portAudioInitialized && stream != NULL && Pa_IsStreamActive(stream)) {
         PaError err = Pa_StopStream(stream);
         if (err != paNoError) {
             const QString msg = QString(tr("Error stopping audio\n(Pa_StopStream: %1)")).arg(Pa_GetErrorText(err));
@@ -329,7 +327,7 @@ int Audio::memberCallback(
     return paContinue;
 }
 
-int Audio::initializeRTcmix()
+int Audio::initializeRTcmix(bool interactive)
 {
     // initialize RTcmix
     int status = RTcmix_init();
@@ -357,21 +355,20 @@ int Audio::initializeRTcmix()
         return -1;
     }
 
+	RTcmix_setInteractive(interactive);
+	
     qDebug("RTcmix initialized");
     return 0;
 }
 
-int Audio::reinitializeRTcmix()
+int Audio::reinitializeRTcmix(bool interactive)
 {
     if (rtcmixInitialized) {
         stopAudio();
         RTcmix_destroy();
         Pa_Sleep(100);
     }
-    initializeRTcmix();
-    int result = startAudio();
-    if (result != 0)
-        return -1;
+    initializeRTcmix(interactive);
     return 0;
 }
 

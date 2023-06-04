@@ -39,6 +39,10 @@ MainWindow::MainWindow(QWidget *parent)
     createPreferences();
 
     audio = new Audio;
+    // Audio is only started up before score parsing if we are in Overlapping mode
+	if (scorePlayMode == Overlapping) {
+		audio->startAudio();
+	}
 
     createEditors();
     rtcmixLogView = new RTcmixLogView(this);
@@ -649,6 +653,7 @@ void MainWindow::checkScoreFinished()
 void MainWindow::setScorePlayMode()
 {
     if (actionAllowOverlappingScores->isChecked()) {
+//    	qDebug("setScorePlayMode: new mode is Overlapping");
         if (mainWindowPreferences->audioShowOverlappingScoresWarning()) {
             QMessageBox msgBox;
             msgBox.setText(tr("Playing scores simultaneously can be unstable. "
@@ -661,11 +666,22 @@ void MainWindow::setScorePlayMode()
             if (result == 0)
                 mainWindowPreferences->setAudioShowOverlappingScoresWarning(false);
         }
+        if (scorePlayMode == Exclusive) {
+            const bool interactive = true;
+            audio->reinitializeRTcmix(interactive);
+        }
         scorePlayMode = Overlapping;
+		audio->startAudio();
         // we do not disable the score-finished callback, in case
         // other useful information gets there in the future
     }
     else {
+//    	qDebug("setScorePlayMode: new mode is Exclusive");
+    	if (scorePlayMode == Overlapping) {
+    		const bool notInteractive = false;
+    		// Seems a bit drastic - maybe Audio::stopAudio should just be public?
+    		audio->reinitializeRTcmix(notInteractive);
+    	}
         scorePlayMode = Exclusive;
         // not sure we should stop score playing here; this setting
         // should affect future plays
@@ -727,6 +743,10 @@ void MainWindow::playScore()
             stopScoreNoReinit();        // no reinit, so we can see error in log
             reinitRTcmixOnPlay = true;
         }
+		// Audio is  started up after score parsing unless we are in Overlapping mode
+		else if (scorePlayMode == Exclusive) {
+			audio->startAudio();
+		}
     }
 //qDebug("invoked playScore(), buf len: %d, buffer...", len);
 //qDebug("%s", buf);
@@ -773,7 +793,12 @@ void MainWindow::stopScore()
 #ifdef FLUSH_SCORE_ON_STOP
     RTcmix_flushScore();
 #else
-    audio->reinitializeRTcmix();
+	const bool isInteractive = (scorePlayMode == Overlapping);
+    audio->reinitializeRTcmix(isInteractive);
+    // Audio is only started up before score parsing if we are in Overlapping mode
+	if (isInteractive) {
+		audio->startAudio();
+	}
 #endif
 }
 
@@ -787,11 +812,15 @@ void MainWindow::showClipping(int clipCount)
     //qDebug("MainWindow::showClipping(%d)", clipCount);
 }
 
-void MainWindow::reinitializeAudio()
+void MainWindow::reinitializeAudio()	// This is only called when preferences change
 {
     stopScoreNoReinit();
     delete audio;
     audio = new Audio;
+    // Audio is only started up before score parsing if we are in Overlapping mode
+	if (scorePlayMode == Overlapping) {
+		audio->startAudio();
+	}
 }
 
 bool MainWindow::chooseRecordFilename(QString &fileName)
