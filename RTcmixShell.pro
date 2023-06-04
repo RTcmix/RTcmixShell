@@ -43,7 +43,7 @@ build_all:!build_pass {
     CONFIG -= app_bundle
 }
 
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 10.13
+QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
 
 
 # install
