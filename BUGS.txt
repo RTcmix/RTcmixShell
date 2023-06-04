@@ -16,5 +16,16 @@ LIMITATIONS
 --------------------
 BUGS
 
+- When you choose an audio interface for the input that has only
+  one channel (typically a microphone), that constrains the number
+  of channels for the output as well. This is an RTcmix issue
+  that's exacerbated by design here. The input and output channel
+  counts should be decoupled everywhere. For the moment, we don't
+  even take live input in RTcmixShell.
+- On Windows, it's really bad not to have a higher level audio
+  driver selection menu, because then all the lower-level elements
+  are given in a flat list that is hard to understand. On macOS
+  this driver menu normally would have just CoreAudio in it.
+  See how Max handles this.
 - Sometimes when I'm running a score, the stop button isn't enabled.
   This is in exclusive, not overlapping, score mode.
