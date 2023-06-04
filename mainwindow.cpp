@@ -66,7 +66,8 @@ void MainWindow::createPreferences()
 //    mainWindowPreferences->dump();
 
     // window size, position to use if no settings
-    const QRect availableGeometry = QApplication::desktop()->availableGeometry(this);
+    QScreen *screen = QGuiApplication::primaryScreen();
+    const QRect availableGeometry = screen->availableGeometry();
     int width = qMin(availableGeometry.width() / 2, 800);
     int height = (availableGeometry.height() * 2) / 3;
     int x = (availableGeometry.width() - this->width()) / 2;
@@ -111,7 +112,7 @@ void MainWindow::createFileActions()
     CHECKED_CONNECT(actionSaveFileAs, &QAction::triggered, this, &MainWindow::fileSaveAs);
 
     actionQuit = new QAction(tr("&Quit"), this);
-    actionQuit->setShortcut(Qt::CTRL + Qt::Key_Q);
+    actionQuit->setShortcut(Qt::CTRL | Qt::Key_Q);
     CHECKED_CONNECT(actionQuit, &QAction::triggered, this, &QWidget::close);
 }
 
@@ -168,17 +169,17 @@ void MainWindow::createEditActions()
     CHECKED_CONNECT(actionFindPrevious, &QAction::triggered, this, &MainWindow::findPrevious);
 
     actionUseSelectionForFind = new QAction(tr("Use Selection for Find"), this);
-    actionUseSelectionForFind->setShortcut(Qt::CTRL + Qt::Key_E);
+    actionUseSelectionForFind->setShortcut(Qt::CTRL | Qt::Key_E);
     actionUseSelectionForFind->setStatusTip(tr("Use the selected text as the search text."));
     CHECKED_CONNECT(actionUseSelectionForFind, &QAction::triggered, this, &MainWindow::useSelectionForFind);
 
     actionReplace = new QAction(tr("Replace"), this);
-    actionReplace->setShortcut(Qt::CTRL + Qt::Key_Equal);
+    actionReplace->setShortcut(Qt::CTRL | Qt::Key_Equal);
     actionReplace->setStatusTip(tr("If selected text is the search string, replace it with text entered in the Find dialog."));
     CHECKED_CONNECT(actionReplace, &QAction::triggered, this, &MainWindow::replace);
 
     actionReplaceAndFind = new QAction(tr("Replace && Find"), this);
-    actionReplaceAndFind->setShortcut(Qt::CTRL + Qt::ALT + Qt::Key_Equal);
+    actionReplaceAndFind->setShortcut(Qt::CTRL | Qt::ALT | Qt::Key_Equal);
     actionReplaceAndFind->setStatusTip(tr("If selected text is the search string, replace it with text entered in the Find dialog, then select the next match."));
     CHECKED_CONNECT(actionReplaceAndFind, &QAction::triggered, this, &MainWindow::replaceAndFind);
 
@@ -187,7 +188,7 @@ void MainWindow::createEditActions()
     CHECKED_CONNECT(actionReplaceAll, &QAction::triggered, this, &MainWindow::replaceAll);
 
     actionShowLineNumbers = new QAction(tr("&Show Line Numbers"), this);
-    actionShowLineNumbers->setShortcut(Qt::CTRL + Qt::Key_L);
+    actionShowLineNumbers->setShortcut(Qt::CTRL | Qt::Key_L);
     actionShowLineNumbers->setStatusTip(tr("Show line numbers along the left edge of the editor"));
     actionShowLineNumbers->setCheckable(true);
     actionShowLineNumbers->setChecked(mainWindowPreferences->editorShowLineNumbers());
@@ -204,18 +205,18 @@ void MainWindow::createEditActions()
 void MainWindow::createScoreActions()
 {
     actionPlay = new QAction(tr("&Play"), this);
-    actionPlay->setShortcut(Qt::CTRL + Qt::Key_P);
+    actionPlay->setShortcut(Qt::CTRL | Qt::Key_P);
     actionPlay->setStatusTip(tr("Play the score"));
     CHECKED_CONNECT(actionPlay, &QAction::triggered, this, &MainWindow::playScore);
 
     actionStop = new QAction(tr("&Stop"), this);
-    actionStop->setShortcut(Qt::CTRL + Qt::Key_Period);
+    actionStop->setShortcut(Qt::CTRL | Qt::Key_Period);
     actionStop->setStatusTip(tr("Stop playing the score"));
     actionStop->setEnabled(false);
     CHECKED_CONNECT(actionStop, &QAction::triggered, this, &MainWindow::stopScore);
 
     actionRecord = new QAction(tr("&Record"), this);
-    actionRecord->setShortcut(Qt::CTRL + Qt::Key_R);
+    actionRecord->setShortcut(Qt::CTRL | Qt::Key_R);
     actionRecord->setStatusTip(tr("Record the sound that's playing to a sound file"));
     CHECKED_CONNECT(actionRecord, &QAction::triggered, this, &MainWindow::record);
 
@@ -225,7 +226,7 @@ void MainWindow::createScoreActions()
     CHECKED_CONNECT(actionAllowOverlappingScores, &QAction::triggered, this, &MainWindow::setScorePlayMode);
 
     actionClearLog = new QAction(tr("&Clear Log"), this);
-    actionClearLog->setShortcut(Qt::CTRL + Qt::Key_B);
+    actionClearLog->setShortcut(Qt::CTRL | Qt::Key_B);
     actionClearLog->setStatusTip(tr("Clear the score report area at the bottom of the window"));
     CHECKED_CONNECT(actionClearLog, &QAction::triggered, rtcmixLogView, &RTcmixLogView::clearLog);
 }
@@ -484,11 +485,15 @@ bool MainWindow::loadFile(const QString &f)
         return false;
 
     // See syntaxhighlighter example for a simpler way...
+#ifdef OLD
     QByteArray data = file.readAll();
     QTextCodec *codec = Qt::codecForHtml(data);
     QString str = codec->toUnicode(data);
     str = QString::fromLocal8Bit(data);
     curEditor->setPlainText(str);
+#else
+    curEditor->setPlainText(file.readAll());
+#endif
     setCurrentFileName(f);
 
     QDir::setCurrent(QFileInfo(f).dir().path());
