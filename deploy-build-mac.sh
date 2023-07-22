@@ -5,14 +5,14 @@
 # the app bundle, then build the project, then run this script.
 
 appname=RTcmixShell
-qtversion=5_15_0
+qtversion=6_5_1
 projectdir=/Users/johgibso/docs/development/Qt-mine/${appname}
 
 librtcmix=librtcmix_embedded.dylib
 libportaudio=libportaudio.2.dylib
 libsndfile=libsndfile.1.dylib
 
-builddir=${projectdir}/../build-${appname}-Desktop_Qt_${qtversion}_clang_64bit-Release
+builddir=${projectdir}/../build-${appname}-Qt_${qtversion}_for_macOS-Release
 mylibdir=${projectdir}/lib/mac
 frameworksdir=${builddir}/${appname}.app/Contents/Frameworks
 executable=${builddir}/${appname}.app/Contents/MacOS/${appname}
