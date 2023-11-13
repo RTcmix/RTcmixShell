@@ -38,7 +38,11 @@ install_name_tool -id @executable_path/../Frameworks/${libsndfile} ${frameworksd
 
 # Fix references to the shared libs from the app executable.
 # (Yes, no change for portaudio, but could be different in future.)
+# Note that the first name is stored in the library. It is *not*
+# necessarily the current location of the lib file. Find this
+# path using otool -L on the dylib file.
 install_name_tool -change /Users/johgibso/rtcmix/lib/${librtcmix} @executable_path/../Frameworks/${librtcmix} ${executable}
+install_name_tool -change /Users/johgibso/rtcmix-master/lib/${librtcmix} @executable_path/../Frameworks/${librtcmix} ${executable}
 install_name_tool -change @executable_path/../Frameworks/${libportaudio} @executable_path/../Frameworks/${libportaudio} ${executable}
 install_name_tool -change /usr/local/lib/${libsndfile} @executable_path/../Frameworks/${libsndfile} ${executable}
 
