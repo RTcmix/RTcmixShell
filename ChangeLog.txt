@@ -1,3 +1,18 @@
+v1.1.1 (8/19/23)
+	- Updated to Qt 6.
+	- Building universal binary for macOS, and dropping the unnotarized version.
+	- OK/Cancel button prefs click problem with last version 
+	  disappeared with update to Qt 6.
+	- Using updated librtcmix.
+	- Using non-interactive RTcmix rendering when Allow Overlapping Scores is
+	  unchecked (Score menu), which is the default. This form of rendering
+	  has higher timing accuracy for notes, so dense granular scores will
+	  work correctly. (Thanks to Doug Scott.)
+	- Differing channel counts for input and output audio devices
+	  were creating problems on many computers. This has been
+	  addressed, partly by removing the input device, which is
+	  still not supported anyway.
+
 v1.0.9 (8/5/20)
 	- Optionally signed and notarized for Catalina+ compatibility.
 	  Now there are two versions: one unsigned/unnotarized, and one
