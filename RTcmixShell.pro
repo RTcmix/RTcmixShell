@@ -36,6 +36,9 @@ SOURCES         = audio.cpp \
 
 RESOURCES += RTcmixShell.qrc
 
+# NB: removing default app_bundle property because we
+# create our bundle in the deploy-build-mac.sh script,
+# which we run manually after building in Qt Creator.
 build_all:!build_pass {
     CONFIG -= build_all
     CONFIG += release
@@ -43,8 +46,12 @@ build_all:!build_pass {
     CONFIG -= app_bundle
 }
 
-QMAKE_MACOSX_DEPLOYMENT_TARGET = 12.0
+# This defaults to the minimum supported macOS
+# version, which is 11 for Qt 6.5.1.
+#QMAKE_MACOSX_DEPLOYMENT_TARGET = 11.0
 
+#QMAKE_APPLE_DEVICE_ARCHS = x86_64 arm64
+#QMAKE_APPLE_DEVICE_ARCHS = x86_64
 
 # install
 target.path = build
