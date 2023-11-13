@@ -92,6 +92,7 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
     initing = true;
 
 /* QGridLayout:
+    Driver:          [popup menu: names of portaudio APIs] (e.g., CoreAudio, Jack, etc.)
     Input Device:    [popup menu: names from portaudio]
     Output Device:   [popup menu: names from portaudio]
     Sampling Rate:   [popup menu: e.g., 22050, 44100, 48000, 88200, 96000]
@@ -109,11 +110,21 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 */
 
     // set up action widgets
+#ifdef HOST_API
+   audioApiMenu = new QComboBox();
+#endif
 
-    inDeviceMenu = new QComboBox();
+#ifdef USE_INPUT_DEVICE
+   inDeviceMenu = new QComboBox();
+#endif
     outDeviceMenu = new QComboBox();
     initDeviceMenus();
+#ifdef HOST_API
+    CHECKED_CONNECT(audioApiMenu, QOverload<int>::of(&QComboBox::activated), this, &AudioTab::conformValuesToSelectedAudioAPI);
+#endif
+#ifdef USE_INPUT_DEVICE
     CHECKED_CONNECT(inDeviceMenu, QOverload<int>::of(&QComboBox::activated), this, &AudioTab::conformValuesToSelectedInputDevice);
+#endif
     CHECKED_CONNECT(outDeviceMenu, QOverload<int>::of(&QComboBox::activated), this, &AudioTab::conformValuesToSelectedOutputDevice);
 
     samplingRateMenu = new QComboBox();
@@ -134,14 +145,21 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 
     QGroupBox *audioGroupBox = new QGroupBox(tr("Audio"));
     QFormLayout *audioLayout = new QFormLayout;
+#ifdef HOST_API
+    audioLayout->addRow(tr("Driver:"), audioApiMenu);
+#endif
+
+#ifdef USE_INPUT_DEVICE
     audioLayout->addRow(tr("Input Device:"), inDeviceMenu);
+#endif
     audioLayout->addRow(tr("Output Device:"), outDeviceMenu);
     audioLayout->addRow(tr("Sampling Rate:"), samplingRateMenu);
 #ifdef INDEPENDENT_INCHANS
     audioLayout->addRow(tr("Input Channels:"), inChannelsSpin);
     audioLayout->addRow(tr("Output Channels:"), outChannelsSpin);
 #else
-    audioLayout->addRow(tr("Channels (in and out):"), outChannelsSpin);
+//    audioLayout->addRow(tr("Channels (in and out):"), outChannelsSpin);
+    audioLayout->addRow(tr("Channels:"), outChannelsSpin);
 #endif
     audioLayout->addRow(tr("Buffer Size:"), bufferSizeMenu);
     audioLayout->addRow(tr("Internal Buses:"), numBusesSpin);
@@ -161,32 +179,51 @@ AudioTab::AudioTab(QWidget *parent) : QWidget(parent)
 
 void AudioTab::initFromPreferences(Preferences *prefs)
 {
-    // input device
-    int deviceID = prefs->audioInputDeviceID();
     QString str;
+
+#ifdef HOST_API
+    // audio API
+    PaHostApiIndex apiID = prefs->audioApiID();
     int menuIndex = 0;
-    int result = deviceNameFromID(deviceID, str);
+    int result = audioApiNameFromId(apiID, str);
+    if (result == 0) {
+        int idx = audioApiMenu->findText(str);
+        if (idx != -1)
+            menuIndex = idx;
+    }
+    audioApiMenu->setCurrentIndex(menuIndex);
+    apiID = audioApiIdFromName(audioApiMenu->currentText()); // could've been overridden
+    menuIndex = audioApiMenu->currentIndex();
+    conformValuesToSelectedAudioAPI(menuIndex);   // so other widget ranges will be set for this device
+#endif
+
+#ifdef USE_INPUT_DEVICE
+    // input device
+    PaDeviceIndex deviceID = prefs->audioInputDeviceID();
+    menuIndex = 0;
+    result = deviceNameFromId(deviceID, str);
     if (result == 0) {
         int idx = inDeviceMenu->findText(str);
         if (idx != -1)
             menuIndex = idx;
     }
     inDeviceMenu->setCurrentIndex(menuIndex);
-    deviceID = deviceIDFromName(inDeviceMenu->currentText()); // could've been overridden
+    deviceID = deviceIdFromName(inDeviceMenu->currentText()); // could've been overridden
     menuIndex = inDeviceMenu->currentIndex();
     conformValuesToSelectedInputDevice(menuIndex);   // so other widget ranges will be set for this device
+#endif
 
     // output device
-    deviceID = prefs->audioOutputDeviceID();
-    menuIndex = 0;
-    result = deviceNameFromID(deviceID, str);
+    PaDeviceIndex deviceID = prefs->audioOutputDeviceID();
+    int menuIndex = 0;
+    int result = deviceNameFromId(deviceID, str);
     if (result == 0) {
         int idx = outDeviceMenu->findText(str);
         if (idx != -1)
             menuIndex = idx;
     }
     outDeviceMenu->setCurrentIndex(menuIndex);
-    deviceID = deviceIDFromName(outDeviceMenu->currentText()); // could've been overridden
+    deviceID = deviceIdFromName(outDeviceMenu->currentText()); // could've been overridden
     menuIndex = outDeviceMenu->currentIndex();
     conformValuesToSelectedOutputDevice(menuIndex);   // so other widget ranges will be set for this device
 
@@ -251,21 +288,25 @@ void AudioTab::applyPreferences(Preferences *prefs)
 {
     bool changed = false;
 
-    int oldVal = prefs->audioInputDeviceID();
-    int newVal = deviceIDFromName(inDeviceMenu->currentText());
+#ifdef HOST_API
+    int oldVal = prefs->audioApiID();
+    int newVal = audioApiIdFromName(audioApiMenu->currentText());
+    prefs->setAudioApiID(newVal);
+    if (newVal != oldVal)
+        changed = true;
+#endif
+
+#ifdef USE_INPUT_DEVICE
+    oldVal = prefs->audioInputDeviceID();
+    newVal = deviceIdFromName(inDeviceMenu->currentText());
     prefs->setAudioInputDeviceID(newVal);
     if (newVal != oldVal)
         changed = true;
+#endif
 
-    oldVal = prefs->audioOutputDeviceID();
-    newVal = deviceIDFromName(outDeviceMenu->currentText());
+    int oldVal = prefs->audioOutputDeviceID();
+    int newVal = deviceIdFromName(outDeviceMenu->currentText());
     prefs->setAudioOutputDeviceID(newVal);
-    if (newVal != oldVal)
-        changed = true;
-
-    oldVal = prefs->audioSamplingRate();
-    newVal = samplingRateMenu->currentText().toInt();
-    prefs->setAudioSamplingRate(newVal);
     if (newVal != oldVal)
         changed = true;
 
@@ -282,6 +323,7 @@ void AudioTab::applyPreferences(Preferences *prefs)
     prefs->setAudioNumOutputChannels(newVal);
     if (newVal != oldVal)
         changed = true;
+#ifdef USE_INPUT_DEVICE
 #ifndef INDEPENDENT_INCHANS
     // set to num output chans
     oldVal = prefs->audioNumInputChannels();
@@ -289,6 +331,13 @@ void AudioTab::applyPreferences(Preferences *prefs)
     if (newVal != oldVal)
         changed = true;
 #endif
+#endif
+
+    oldVal = prefs->audioSamplingRate();
+    newVal = samplingRateMenu->currentText().toInt();
+    prefs->setAudioSamplingRate(newVal);
+    if (newVal != oldVal)
+        changed = true;
 
     oldVal = prefs->audioBufferSize();
     newVal = bufferSizeMenu->currentText().toInt();
@@ -314,20 +363,33 @@ void AudioTab::applyPreferences(Preferences *prefs)
 // Create the input and output device menus.
 void AudioTab::initDeviceMenus()
 {
-    inDeviceMenu->clear();
-    int devCount = availableInputDeviceIDs(inputDeviceList);
-    for (int i = 0; i < devCount; i++) {
+#ifdef HOST_API
+    audioApiMenu->clear();
+    PaHostApiIndex apiCount = availableAudioApiIDs(audioAPIList);
+    for (PaHostApiIndex i = 0; i < apiCount; i++) {
         QString name;
-        int result = deviceNameFromID(inputDeviceList[i], name);
+        int result = audioApiNameFromId(audioAPIList[i], name);
+        if (result == 0)
+            audioApiMenu->addItem(name);
+    }
+#endif
+
+#ifdef USE_INPUT_DEVICE
+    inDeviceMenu->clear();
+    PaDeviceIndex devCount = availableInputDeviceIDs(inputDeviceList);
+    for (PaDeviceIndex i = 0; i < devCount; i++) {
+        QString name;
+        int result = deviceNameFromId(inputDeviceList[i], name);
         if (result == 0)
            inDeviceMenu->addItem(name);
     }
+#endif
 
     outDeviceMenu->clear();
-    devCount = availableOutputDeviceIDs(outputDeviceList);
-    for (int i = 0; i < devCount; i++) {
+    PaDeviceIndex devCount = availableOutputDeviceIDs(outputDeviceList);
+    for (PaDeviceIndex i = 0; i < devCount; i++) {
         QString name;
-        int result = deviceNameFromID(outputDeviceList[i], name);
+        int result = deviceNameFromId(outputDeviceList[i], name);
         if (result == 0)
            outDeviceMenu->addItem(name);
     }
@@ -342,16 +404,18 @@ void AudioTab::conformValuesToSelectedOutputDevice(int outputDeviceMenuID)
 
     // Get current output device ID, and set ranges of other items,
     // and possibly selected items, to valid values.
-    int deviceID = deviceIDFromName(outDeviceMenu->currentText());
+    int deviceID = deviceIdFromName(outDeviceMenu->currentText());
 
     // Update number of channels
     int maxChans = maxOutputChannelCount(deviceID);
     int curVal = outChannelsSpin->value();
 #ifndef INDEPENDENT_INCHANS
-    int inputDeviceID = deviceIDFromName(inDeviceMenu->currentText());
+#ifdef USE_INPUT_DEVICE
+    int inputDeviceID = deviceIdFromName(inDeviceMenu->currentText());
     int maxInChans = maxInputChannelCount(inputDeviceID);
     if (maxInChans < maxChans)
         maxChans = maxInChans;
+#endif
 #endif
     outChannelsSpin->setRange(1, maxChans);
     outChannelsSpin->setValue(curVal);
@@ -407,7 +471,7 @@ void AudioTab::conformValuesToSelectedInputDevice(int inputDeviceMenuID)
 
     // Get current input device ID, and set ranges of other items,
     // and possibly selected items, to valid values.
-    int deviceID = deviceIDFromName(inDeviceMenu->currentText());
+    int deviceID = deviceIdFromName(inDeviceMenu->currentText());
 
 #ifdef INDEPENDENT_INCHANS
     // Update number of channels
@@ -419,7 +483,7 @@ void AudioTab::conformValuesToSelectedInputDevice(int inputDeviceMenuID)
 #else
     // force num channels to be min(numinchans, numoutchans)
     int maxChans = maxInputChannelCount(deviceID);
-    int outputDeviceID = deviceIDFromName(outDeviceMenu->currentText());
+    int outputDeviceID = deviceIdFromName(outDeviceMenu->currentText());
     int maxOutChans = maxOutputChannelCount(outputDeviceID);
     int curVal = outChannelsSpin->value();
     outChannelsSpin->setRange(1, qMin(maxChans, maxOutChans));

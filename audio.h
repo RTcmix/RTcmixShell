@@ -17,17 +17,20 @@ class Preferences;
 #include "pa_ringbuffer.h"
 #include "sndfile.h"
 
-int availableInputDeviceIDs(QVector<int> &);
-int availableOutputDeviceIDs(QVector<int> &);
+int availableAudioApiIDs(QVector<PaHostApiIndex> &);
+int availableInputDeviceIDs(QVector<PaDeviceIndex> &);
+int availableOutputDeviceIDs(QVector<PaDeviceIndex> &);
 #ifdef UNUSED
 int defaultOutputDevice();
 #endif
-int deviceIDFromName(const QString &);
-int deviceNameFromID(const int, QString &);
-int maxInputChannelCount(const int);
-int maxOutputChannelCount(const int);
-int availableSamplingRates(const int, const int, QVector<int> &);
-int availableBufferSizes(const int, QVector<int> &);
+PaHostApiIndex audioApiIdFromName(const QString &);
+int audioApiNameFromId(const PaHostApiIndex, QString &);
+PaDeviceIndex deviceIdFromName(const QString &);
+int deviceNameFromId(const PaDeviceIndex, QString &);
+int maxInputChannelCount(const PaDeviceIndex);
+int maxOutputChannelCount(const PaDeviceIndex);
+int availableSamplingRates(const PaDeviceIndex, const int, QVector<int> &);
+int availableBufferSizes(const PaDeviceIndex, QVector<int> &);
 
 class Audio : public QObject
 {
@@ -70,6 +73,7 @@ private:
     int outputUnderflowCount;
 
     // sync these with prefs dlog
+    int audioApiID;
     int inputDeviceID;
     int outputDeviceID;
     float samplingRate;

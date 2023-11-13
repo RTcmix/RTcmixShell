@@ -68,12 +68,16 @@ public:
     void cancelPreferences(Preferences *);
 
 private slots:
+#ifdef HOST_API
+    void conformValuesToSelectedAudioAPI(int);
+#endif
     void conformValuesToSelectedInputDevice(int);
     void conformValuesToSelectedOutputDevice(int);
 
 private:
     void initDeviceMenus();
 
+    QComboBox *audioApiMenu;
     QComboBox *inDeviceMenu;
     QComboBox *outDeviceMenu;
     QComboBox *samplingRateMenu;
@@ -82,6 +86,7 @@ private:
     QComboBox *bufferSizeMenu;
     QSpinBox *numBusesSpin;
     QCheckBox *warnOverlappingScores;
+    QVector<int> audioAPIList;
     QVector<int> inputDeviceList;
     QVector<int> outputDeviceList;
     bool initing;
@@ -248,6 +253,9 @@ public:
     void setLogLinkFamily(bool linkFamily) { settings->setValue("log/linkFamily", linkFamily); }
 
     // Audio
+
+    int audioApiID() { return settings->value("audio/apiID", 0).toInt(); }
+    void setAudioApiID(int id) { settings->setValue("audio/apiID", id); }
 
     int audioInputDeviceID() { return settings->value("audio/inputDeviceID", 0).toInt(); }
     void setAudioInputDeviceID(int id) { settings->setValue("audio/inputDeviceID", id); }
