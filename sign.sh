@@ -4,10 +4,10 @@
 
 identity='Developer ID Application: Indiana University (5J69S77A7G)'
 appname=RTcmixShell
-qtversion=5_15_0
+qtversion=6_5_1
 projectdir=/Users/johgibso/docs/development/Qt-mine/${appname}
 entitlements=${projectdir}/Entitlements.plist
-builddir=${projectdir}/../build-${appname}-Desktop_Qt_${qtversion}_clang_64bit-Release
+builddir=${projectdir}/../build-${appname}-Qt_${qtversion}_for_macOS-Release
 version=`grep "define APP_VERSION_STR" main.cpp | sed 's/"//g' \
 	| tr -d '\r\n' | awk '/define/ {print $3}'`
 unsigneddir=${appname}-${version}-macOS
