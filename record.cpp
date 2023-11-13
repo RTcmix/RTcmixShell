@@ -19,7 +19,7 @@ RecordWorker::~RecordWorker()
 void RecordWorker::record()
 {
 //qDebug("entering RecordWorker::record()");
-int totsampswritten = 0;
+//int totsampswritten = 0;
     // NB: This will write a total number of frames that is evenly divisible by the audio block size
     while (keepRecording) {
         int sampsAvail = PaUtil_GetRingBufferReadAvailable(ringBuffer);
@@ -31,7 +31,7 @@ int totsampswritten = 0;
             sf_count_t sampsWritten = sf_write_float(outFile, transferBuffer, sampsRead);
             if (sampsWritten != sampsRead)
                 qDebug().nospace() << "RecordWorker::record(): sf_write_float didn't write all the samps (" << sampsRead << " => " << sampsWritten;
-totsampswritten += sampsRead;
+//totsampswritten += sampsRead;
         }
         //sf_write_sync(outFile);  messes up playback. call less frequently, or not at all?
     }
